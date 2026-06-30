@@ -1,0 +1,2500 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Timeline Viewer</title>
+
+  <!--
+    Timeline Viewer
+
+    Browser-only Excel/CSV timeline viewer.
+
+    Development note:
+      This prototype uses SheetJS and html-to-image from CDNs. For production/offline
+      use, download and bundle xlsx.full.min.js and html-to-image.min.js locally.
+  -->
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #f9fafb;
+      --border: #d7dce5;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #111827;
+      --marker: #2563eb;
+      --timestamp: #b00020;
+      --bar: #f28c28;
+      --bar-text: #ffffff;
+      --activity: #111827;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+      --radius: 18px;
+      --focus: #2563eb;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b1020;
+      --panel: #111827;
+      --panel-2: #0f172a;
+      --border: #263143;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #d1d5db;
+      --marker: #60a5fa;
+      --timestamp: #f87171;
+      --bar: #c86b18;
+      --bar-text: #ffffff;
+      --activity: #e5e7eb;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+      --focus: #60a5fa;
+    }
+
+    [data-theme="blue"] {
+      --bg: #eef5ff;
+      --panel: #ffffff;
+      --panel-2: #f8fbff;
+      --border: #bfd5f5;
+      --text: #102033;
+      --muted: #53657c;
+      --line: #1f2937;
+      --marker: #2563eb;
+      --timestamp: #1d4ed8;
+      --bar: #2563eb;
+      --bar-text: #ffffff;
+      --activity: #111827;
+      --shadow: 0 18px 45px rgba(37, 99, 235, 0.12);
+      --focus: #2563eb;
+    }
+
+    [data-theme="purple"] {
+      --bg: #faf5ff;
+      --panel: #ffffff;
+      --panel-2: #fdfaff;
+      --border: #dfc7f2;
+      --text: #251238;
+      --muted: #6b5879;
+      --line: #6b21a8;
+      --marker: #0f766e;
+      --timestamp: #7e22ce;
+      --bar: #0f766e;
+      --bar-text: #ffffff;
+      --activity: #1f2937;
+      --shadow: 0 18px 45px rgba(107, 33, 168, 0.12);
+      --focus: #7e22ce;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(242, 140, 40, 0.10), transparent 32rem),
+        var(--bg);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1400px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--panel) 84%, transparent);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--marker);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--marker) 18%, transparent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 18px;
+      overflow: hidden;
+    }
+
+    .section {
+      padding: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child {
+      border-bottom: 0;
+    }
+
+    .section-details > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+
+    .section-details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .section-details > summary:hover {
+      background: color-mix(in srgb, var(--panel-2) 72%, transparent);
+    }
+
+    .section-details summary h2 {
+      margin: 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .section-chevron {
+      color: var(--muted);
+      font-size: 12px;
+      transform: rotate(-90deg);
+      transition: transform 140ms ease;
+    }
+
+    .section-details[open] .section-chevron {
+      transform: rotate(0deg);
+    }
+
+    .section-body {
+      padding: 0 18px 18px;
+    }
+
+    .section-subtitle {
+      margin: -4px 18px 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      padding: 18px;
+      border: 2px dashed color-mix(in srgb, var(--border) 86%, var(--focus));
+      border-radius: 16px;
+      background: var(--panel-2);
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--focus);
+      background: color-mix(in srgb, var(--focus) 9%, var(--panel));
+      transform: translateY(-1px);
+    }
+
+    .drop-zone strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .drop-zone span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    label.field {
+      display: block;
+      margin-top: 12px;
+    }
+
+    label.field:first-child {
+      margin-top: 0;
+    }
+
+    .field span {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    select,
+    input[type="search"],
+    input[type="text"] {
+      width: 100%;
+      height: 38px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--focus);
+    }
+
+    .range-value {
+      display: inline;
+      margin-left: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+
+
+    input[type="color"] {
+      width: 44px;
+      height: 38px;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      cursor: pointer;
+    }
+
+    .control-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .preset-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .colour-grid,
+    .font-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .colour-control {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      min-height: 52px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--panel-2);
+    }
+
+    .colour-control label {
+      min-width: 0;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .colour-control small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .button.compact {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .export-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .export-buttons .button.primary {
+      grid-column: 1 / -1;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .checkbox-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--focus);
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .button {
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .button.primary {
+      color: white;
+      border-color: var(--focus);
+      background: var(--focus);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .meta {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-2);
+      font-size: 13px;
+    }
+
+    .meta-item span:first-child {
+      color: var(--muted);
+    }
+
+    .meta-item span:last-child {
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .status.error {
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+    }
+
+    [data-theme="dark"] .status.error {
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.30);
+      border-color: rgba(248, 113, 113, 0.30);
+    }
+
+    .timeline-card {
+      --timeline-title-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-timestamp-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-tactic-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-activity-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 640px;
+      overflow: hidden;
+      isolation: isolate;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .timeline-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel-2) 72%, transparent);
+    }
+
+    .timeline-toolbar h2 {
+      margin: 0;
+      font-family: var(--timeline-title-font);
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .timeline-toolbar small {
+      display: block;
+      font-family: var(--timeline-activity-font);
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .timeline-toolbar-title {
+      min-width: 0;
+    }
+
+    .timeline-toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .timeline-toolbar-actions .button {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .timeline {
+      position: relative;
+      padding: 28px 30px 38px;
+    }
+
+    .empty-state {
+      display: grid;
+      font-family: var(--timeline-activity-font);
+      place-items: center;
+      min-height: 520px;
+      padding: 36px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-state strong {
+      display: block;
+      color: var(--text);
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .date-group {
+      position: relative;
+      display: grid;
+      grid-template-columns: 190px 28px minmax(0, 1fr);
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .date-group + .date-group {
+      margin-top: 30px;
+    }
+
+    .date-heading {
+      grid-column: 1 / -1;
+      font-family: var(--timeline-title-font);
+      margin: 0 0 18px 206px;
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--panel-2);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .event {
+      display: contents;
+    }
+
+    .timestamp {
+      grid-column: 1;
+      font-family: var(--timeline-timestamp-font);
+      align-self: start;
+      padding-top: 2px;
+      color: var(--timestamp);
+      font-size: 13px;
+      font-weight: 900;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .axis {
+      grid-column: 2;
+      position: relative;
+      min-height: var(--event-height, 56px);
+    }
+
+    .axis::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      transform: translateX(-50%);
+      background: var(--line);
+      opacity: 0.88;
+    }
+
+    .event.first-event .axis::before {
+      top: 6px;
+    }
+
+    .event.last-event .axis::before {
+      bottom: calc(100% - 6px);
+    }
+
+    .marker {
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      z-index: 2;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      background: var(--marker);
+      box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--marker) 20%, transparent),
+        0 0 0 1px var(--panel);
+    }
+
+    .event-body {
+      grid-column: 3;
+      min-width: 0;
+      padding-bottom: var(--event-body-padding, 22px);
+    }
+
+    .tactic {
+      display: inline-flex;
+      font-family: var(--timeline-tactic-font);
+      align-items: center;
+      min-width: 325px;
+      min-height: 26px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: var(--bar);
+      color: var(--bar-text);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      box-shadow: 0 7px 18px color-mix(in srgb, var(--bar) 20%, transparent);
+    }
+
+    .activity {
+      margin-top: var(--activity-margin-top, 8px);
+      font-family: var(--timeline-activity-font);
+      color: var(--activity);
+      font-size: 14px;
+      line-height: var(--activity-line-height, 1.55);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .event-footer {
+      display: flex;
+      font-family: var(--timeline-activity-font);
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: var(--event-footer-margin-top, 8px);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-2);
+    }
+
+    mark {
+      padding: 0 2px;
+      border-radius: 4px;
+      background: #fde68a;
+      color: #111827;
+    }
+
+    @media (max-width: 1050px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .date-group {
+        grid-template-columns: 150px 28px minmax(0, 1fr);
+      }
+
+      .date-heading {
+        margin-left: 166px;
+      }
+
+      .tactic {
+        min-width: min(325px, 100%);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100vw - 18px, 1400px);
+        padding-top: 18px;
+      }
+
+      .hero {
+        display: block;
+      }
+
+      .badge {
+        margin-top: 14px;
+      }
+
+      .timeline {
+        padding: 18px 14px 28px;
+      }
+
+      .timeline-toolbar {
+        display: block;
+      }
+
+      .timeline-toolbar-actions {
+        justify-content: flex-start;
+        margin-top: 12px;
+      }
+
+      .date-group {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .date-heading {
+        margin-left: 0;
+      }
+
+      .event {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .timestamp {
+        grid-column: 2;
+        text-align: left;
+      }
+
+      .axis {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
+
+      .event-body {
+        grid-column: 2;
+      }
+
+      .colour-grid,
+      .button-row,
+      .export-buttons {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .controls,
+      .hero,
+      .timeline-toolbar .button {
+        display: none !important;
+      }
+
+      .app {
+        width: 100%;
+        padding: 0;
+      }
+
+      .grid {
+        display: block;
+      }
+
+      .timeline-card {
+        box-shadow: none;
+        border: 0;
+      }
+
+      .timeline {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <h1>Timeline Viewer</h1>
+        <p>
+          Load an Excel workbook or CSV file in your browser and render a polished timeline.
+          Files are parsed locally; this prototype uses CDNs for the spreadsheet and PNG export libraries.
+        </p>
+      </div>
+      <div class="badge" title="No server upload is performed">
+        <span class="badge-dot"></span>
+        Local file processing
+      </div>
+    </header>
+
+    <div class="grid">
+      <aside class="card controls">
+        <section class="section">
+          <details class="section-details" id="inputDetails" open>
+            <summary><h2>Input</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+
+          <label class="drop-zone" id="dropZone" for="fileInput">
+            <span>
+              <strong>Choose or drop an Excel/CSV file</strong>
+              Supports .xlsx, .xlsm and .csv
+            </span>
+          </label>
+          <input id="fileInput" type="file" accept=".xlsx,.xlsm,.csv,.xls,.xlsb" />
+
+          <div id="status" class="status">No file loaded. If the expected sheet and columns are present, the timeline will render automatically.</div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="section-details" id="workbookDetails">
+            <summary><h2>Workbook</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+
+          <label class="field">
+            <span>Sheet</span>
+            <select id="sheetSelect" disabled></select>
+          </label>
+
+          <div class="row">
+            <label class="field">
+              <span>Timestamp</span>
+              <select id="timestampCol" disabled></select>
+            </label>
+
+            <label class="field">
+              <span>Tactic / Category</span>
+              <select id="tacticCol" disabled></select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Activity</span>
+            <select id="activityCol" disabled></select>
+          </label>
+
+          <div class="row">
+            <label class="field">
+              <span>Filter column</span>
+              <select id="visualizeCol" disabled></select>
+            </label>
+
+            <label class="field">
+              <span>Filter value</span>
+              <input id="visualizeValue" type="text" value="yes" disabled />
+            </label>
+          </div>
+
+          <label class="checkbox-row">
+            <input id="ignoreVisualize" type="checkbox" disabled />
+            Include all rows
+          </label>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="section-details" id="viewDetails" open>
+            <summary><h2>View</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+
+          <label class="field">
+            <span>Timeline title</span>
+            <input id="timelineTitleInput" type="text" value="Incident Timeline" />
+          </label>
+
+          <label class="field">
+            <span>Search</span>
+            <input id="searchInput" type="search" placeholder="Search activity, tactic, timestamp..." disabled />
+          </label>
+
+          <label class="field">
+            <span>Sort</span>
+            <select id="sortSelect" disabled>
+              <option value="asc">Oldest first</option>
+              <option value="desc">Newest first</option>
+            </select>
+          </label>
+
+          <label class="checkbox-row">
+            <input id="groupByDate" type="checkbox" disabled />
+            Group by date
+          </label>
+
+          <label class="checkbox-row">
+            <input id="showSourceRow" type="checkbox" disabled />
+            Show source row
+          </label>
+
+          <label class="field">
+            <span>Row spacing <small class="range-value" id="rowSpacingValue">Default</small></span>
+            <input id="rowSpacing" type="range" min="-60" max="120" step="5" value="0" disabled />
+          </label>
+
+          <div class="export-buttons">
+            <button class="button primary" id="renderButton" disabled>Render timeline</button>
+            <button class="button" id="svgButton" disabled>SVG</button>
+            <button class="button" id="pngButton" disabled>PNG</button>
+            <button class="button" id="printButton" disabled>Print / PDF</button>
+          </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="section-details" id="coloursDetails">
+            <summary><h2>Colours</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+
+          <div class="preset-row">
+            <label class="field">
+              <span>Preset</span>
+              <select id="colourPreset">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="blue">Blue report</option>
+                <option value="purple">Purple / teal</option>
+                <option value="highContrast">High contrast</option>
+                <option value="forensicAmber">Forensic amber</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <button class="button compact" id="resetColoursButton" type="button">Reset</button>
+          </div>
+
+          <p class="control-note">
+            Pick a preset, then adjust individual timeline colours. The rest of the interface stays unchanged. Exports use the same timeline palette.
+          </p>
+
+          <div class="colour-grid">
+            <div class="colour-control">
+              <input id="colourBg" type="color" value="#f6f7fb" />
+              <label for="colourBg">Timeline background<small id="colourBgValue">#f6f7fb</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourPanel" type="color" value="#ffffff" />
+              <label for="colourPanel">Timeline card<small id="colourPanelValue">#ffffff</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourLine" type="color" value="#111827" />
+              <label for="colourLine">Timeline line<small id="colourLineValue">#111827</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourMarker" type="color" value="#2563eb" />
+              <label for="colourMarker">Marker<small id="colourMarkerValue">#2563eb</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourTimestamp" type="color" value="#b00020" />
+              <label for="colourTimestamp">Timestamp<small id="colourTimestampValue">#b00020</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourBar" type="color" value="#f28c28" />
+              <label for="colourBar">Tactic bar<small id="colourBarValue">#f28c28</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourBarText" type="color" value="#ffffff" />
+              <label for="colourBarText">Bar text<small id="colourBarTextValue">#ffffff</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourActivity" type="color" value="#111827" />
+              <label for="colourActivity">Activity text<small id="colourActivityValue">#111827</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourText" type="color" value="#111827" />
+              <label for="colourText">Title text<small id="colourTextValue">#111827</small></label>
+            </div>
+            <div class="colour-control">
+              <input id="colourAccent" type="color" value="#2563eb" />
+              <label for="colourAccent">Timeline accent<small id="colourAccentValue">#2563eb</small></label>
+            </div>
+          </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="section-details" id="typographyDetails">
+            <summary><h2>Typography</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+
+          <div class="preset-row">
+            <label class="field">
+              <span>Font preset</span>
+              <select id="fontPreset">
+                <option value="professional">Professional</option>
+                <option value="compact">Compact</option>
+                <option value="monoTime">Monospace timestamps</option>
+                <option value="serifReport">Serif report</option>
+                <option value="allMono">All monospace</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <button class="button compact" id="resetFontsButton" type="button">Reset</button>
+          </div>
+
+          <p class="control-note">
+            Font choices apply only to the timeline and its SVG/PNG exports, not the rest of the page.
+          </p>
+
+          <div class="font-grid">
+            <label class="field">
+              <span>Title font</span>
+              <select id="fontTitle"></select>
+            </label>
+            <label class="field">
+              <span>Timestamp font</span>
+              <select id="fontTimestamp"></select>
+            </label>
+            <label class="field">
+              <span>Tactic/bar font</span>
+              <select id="fontTactic"></select>
+            </label>
+            <label class="field">
+              <span>Activity font</span>
+              <select id="fontActivity"></select>
+            </label>
+          </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="section-details" id="statsDetails">
+            <summary><h2>Stats</h2><span class="section-chevron">▾</span></summary>
+            <div class="section-body">
+          <div class="meta">
+            <div class="meta-item"><span>Rows read</span><span id="rowsRead">0</span></div>
+            <div class="meta-item"><span>Events shown</span><span id="eventsShown">0</span></div>
+            <div class="meta-item"><span>Skipped rows</span><span id="rowsSkipped">0</span></div>
+            <div class="meta-item"><span>Bad timestamps</span><span id="badTimestamps">0</span></div>
+          </div>
+            </div>
+          </details>
+        </section>
+      </aside>
+
+      <section class="card timeline-card" id="timelineCard">
+        <div class="timeline-toolbar">
+          <div class="timeline-toolbar-title">
+            <h2 id="timelineTitle">Incident Timeline</h2>
+            <small id="timelineSubtitle">Load a file to build the timeline.</small>
+          </div>
+          <div class="timeline-toolbar-actions" aria-label="Timeline exports">
+            <button class="button" id="toolbarSvgButton" disabled>SVG</button>
+            <button class="button" id="toolbarPngButton" disabled>PNG</button>
+            <button class="button" id="toolbarPrintButton" disabled>Print / PDF</button>
+          </div>
+        </div>
+
+        <div id="timeline" class="timeline">
+          <div class="empty-state">
+            <div>
+              <strong>No timeline loaded</strong>
+              Choose an Excel workbook or CSV file to begin.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const DEFAULTS = {
+      sheet: "Timeline",
+      timestampCol: "Timestamp_UTC_0",
+      activityCol: "Activity",
+      tacticCol: "MITRE Tactic",
+      visualizeCol: "Visualize",
+      visualizeValue: "yes"
+    };
+
+
+    const COLOUR_PRESETS = {
+      light: {
+        "--bg": "#f6f7fb",
+        "--panel": "#ffffff",
+        "--panel-2": "#f9fafb",
+        "--border": "#d7dce5",
+        "--text": "#111827",
+        "--muted": "#6b7280",
+        "--line": "#111827",
+        "--marker": "#2563eb",
+        "--timestamp": "#b00020",
+        "--bar": "#f28c28",
+        "--bar-text": "#ffffff",
+        "--activity": "#111827",
+        "--focus": "#2563eb"
+      },
+      dark: {
+        "--bg": "#0b1020",
+        "--panel": "#111827",
+        "--panel-2": "#0f172a",
+        "--border": "#263143",
+        "--text": "#e5e7eb",
+        "--muted": "#9ca3af",
+        "--line": "#d1d5db",
+        "--marker": "#60a5fa",
+        "--timestamp": "#f87171",
+        "--bar": "#c86b18",
+        "--bar-text": "#ffffff",
+        "--activity": "#e5e7eb",
+        "--focus": "#60a5fa"
+      },
+      blue: {
+        "--bg": "#eef5ff",
+        "--panel": "#ffffff",
+        "--panel-2": "#f8fbff",
+        "--border": "#bfd5f5",
+        "--text": "#102033",
+        "--muted": "#53657c",
+        "--line": "#1f2937",
+        "--marker": "#2563eb",
+        "--timestamp": "#1d4ed8",
+        "--bar": "#2563eb",
+        "--bar-text": "#ffffff",
+        "--activity": "#111827",
+        "--focus": "#2563eb"
+      },
+      purple: {
+        "--bg": "#faf5ff",
+        "--panel": "#ffffff",
+        "--panel-2": "#fdfaff",
+        "--border": "#dfc7f2",
+        "--text": "#251238",
+        "--muted": "#6b5879",
+        "--line": "#6b21a8",
+        "--marker": "#0f766e",
+        "--timestamp": "#7e22ce",
+        "--bar": "#0f766e",
+        "--bar-text": "#ffffff",
+        "--activity": "#1f2937",
+        "--focus": "#7e22ce"
+      },
+      highContrast: {
+        "--bg": "#ffffff",
+        "--panel": "#ffffff",
+        "--panel-2": "#f3f4f6",
+        "--border": "#000000",
+        "--text": "#000000",
+        "--muted": "#333333",
+        "--line": "#000000",
+        "--marker": "#000000",
+        "--timestamp": "#b00020",
+        "--bar": "#000000",
+        "--bar-text": "#ffffff",
+        "--activity": "#000000",
+        "--focus": "#000000"
+      },
+      forensicAmber: {
+        "--bg": "#17120a",
+        "--panel": "#21180e",
+        "--panel-2": "#2b2114",
+        "--border": "#5a3d19",
+        "--text": "#f8ead2",
+        "--muted": "#d5b98e",
+        "--line": "#f59e0b",
+        "--marker": "#facc15",
+        "--timestamp": "#fb7185",
+        "--bar": "#b45309",
+        "--bar-text": "#fff7ed",
+        "--activity": "#f8ead2",
+        "--focus": "#f59e0b"
+      }
+    };
+
+    const COLOUR_FIELDS = [
+      { id: "colourBg", labelId: "colourBgValue", variable: "--bg" },
+      { id: "colourPanel", labelId: "colourPanelValue", variable: "--panel" },
+      { id: "colourLine", labelId: "colourLineValue", variable: "--line" },
+      { id: "colourMarker", labelId: "colourMarkerValue", variable: "--marker" },
+      { id: "colourTimestamp", labelId: "colourTimestampValue", variable: "--timestamp" },
+      { id: "colourBar", labelId: "colourBarValue", variable: "--bar" },
+      { id: "colourBarText", labelId: "colourBarTextValue", variable: "--bar-text" },
+      { id: "colourActivity", labelId: "colourActivityValue", variable: "--activity" },
+      { id: "colourText", labelId: "colourTextValue", variable: "--text" },
+      { id: "colourAccent", labelId: "colourAccentValue", variable: "--focus" }
+    ];
+
+    const FONT_OPTIONS = {
+      system: { label: "System / Inter", stack: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+      aptos: { label: "Aptos", stack: 'Aptos, "Segoe UI", Arial, sans-serif' },
+      calibri: { label: "Calibri", stack: 'Calibri, "Segoe UI", Arial, sans-serif' },
+      segoe: { label: "Segoe UI", stack: '"Segoe UI", Arial, sans-serif' },
+      arial: { label: "Arial", stack: "Arial, Helvetica, sans-serif" },
+      verdana: { label: "Verdana", stack: "Verdana, Geneva, sans-serif" },
+      tahoma: { label: "Tahoma", stack: "Tahoma, Geneva, sans-serif" },
+      trebuchet: { label: "Trebuchet MS", stack: '"Trebuchet MS", Arial, sans-serif' },
+      georgia: { label: "Georgia", stack: 'Georgia, "Times New Roman", serif' },
+      times: { label: "Times New Roman", stack: '"Times New Roman", Times, serif' },
+      consolas: { label: "Consolas", stack: 'Consolas, "Courier New", monospace' },
+      courier: { label: "Courier New", stack: '"Courier New", Courier, monospace' }
+    };
+
+    const FONT_PRESETS = {
+      professional: { title: "system", timestamp: "system", tactic: "system", activity: "system" },
+      compact: { title: "segoe", timestamp: "tahoma", tactic: "segoe", activity: "arial" },
+      monoTime: { title: "system", timestamp: "consolas", tactic: "system", activity: "system" },
+      serifReport: { title: "georgia", timestamp: "consolas", tactic: "arial", activity: "georgia" },
+      allMono: { title: "consolas", timestamp: "consolas", tactic: "consolas", activity: "consolas" }
+    };
+
+    const FONT_FIELDS = [
+      { id: "fontTitle", key: "title", variable: "--timeline-title-font" },
+      { id: "fontTimestamp", key: "timestamp", variable: "--timeline-timestamp-font" },
+      { id: "fontTactic", key: "tactic", variable: "--timeline-tactic-font" },
+      { id: "fontActivity", key: "activity", variable: "--timeline-activity-font" }
+    ];
+
+    const state = {
+      fileName: "",
+      workbook: null,
+      rows: [],
+      events: [],
+      filteredEvents: [],
+      stats: {
+        rowsRead: 0,
+        eventsShown: 0,
+        skippedRows: 0,
+        badTimestamps: 0
+      }
+    };
+
+    const els = {
+      body: document.body,
+      dropZone: document.getElementById("dropZone"),
+      fileInput: document.getElementById("fileInput"),
+      status: document.getElementById("status"),
+      inputDetails: document.getElementById("inputDetails"),
+      workbookDetails: document.getElementById("workbookDetails"),
+      viewDetails: document.getElementById("viewDetails"),
+      coloursDetails: document.getElementById("coloursDetails"),
+      typographyDetails: document.getElementById("typographyDetails"),
+      statsDetails: document.getElementById("statsDetails"),
+      sheetSelect: document.getElementById("sheetSelect"),
+      timestampCol: document.getElementById("timestampCol"),
+      activityCol: document.getElementById("activityCol"),
+      tacticCol: document.getElementById("tacticCol"),
+      visualizeCol: document.getElementById("visualizeCol"),
+      visualizeValue: document.getElementById("visualizeValue"),
+      ignoreVisualize: document.getElementById("ignoreVisualize"),
+      timelineTitleInput: document.getElementById("timelineTitleInput"),
+      searchInput: document.getElementById("searchInput"),
+      colourPreset: document.getElementById("colourPreset"),
+      resetColoursButton: document.getElementById("resetColoursButton"),
+      fontPreset: document.getElementById("fontPreset"),
+      resetFontsButton: document.getElementById("resetFontsButton"),
+      fontTitle: document.getElementById("fontTitle"),
+      fontTimestamp: document.getElementById("fontTimestamp"),
+      fontTactic: document.getElementById("fontTactic"),
+      fontActivity: document.getElementById("fontActivity"),
+      sortSelect: document.getElementById("sortSelect"),
+      groupByDate: document.getElementById("groupByDate"),
+      showSourceRow: document.getElementById("showSourceRow"),
+      rowSpacing: document.getElementById("rowSpacing"),
+      rowSpacingValue: document.getElementById("rowSpacingValue"),
+      renderButton: document.getElementById("renderButton"),
+      svgButton: document.getElementById("svgButton"),
+      pngButton: document.getElementById("pngButton"),
+      printButton: document.getElementById("printButton"),
+      toolbarSvgButton: document.getElementById("toolbarSvgButton"),
+      toolbarPngButton: document.getElementById("toolbarPngButton"),
+      toolbarPrintButton: document.getElementById("toolbarPrintButton"),
+      timelineCard: document.getElementById("timelineCard"),
+      timeline: document.getElementById("timeline"),
+      timelineTitle: document.getElementById("timelineTitle"),
+      timelineSubtitle: document.getElementById("timelineSubtitle"),
+      rowsRead: document.getElementById("rowsRead"),
+      eventsShown: document.getElementById("eventsShown"),
+      rowsSkipped: document.getElementById("rowsSkipped"),
+      badTimestamps: document.getElementById("badTimestamps")
+    };
+
+    const colourEls = Object.fromEntries(
+      COLOUR_FIELDS.flatMap((field) => [
+        [field.id, document.getElementById(field.id)],
+        [field.labelId, document.getElementById(field.labelId)]
+      ])
+    );
+
+    const fontEls = Object.fromEntries(
+      FONT_FIELDS.map((field) => [field.id, document.getElementById(field.id)])
+    );
+
+    function populateFontSelects() {
+      for (const field of FONT_FIELDS) {
+        const select = fontEls[field.id];
+        if (!select) continue;
+        select.innerHTML = "";
+        for (const [value, option] of Object.entries(FONT_OPTIONS)) {
+          const optionEl = document.createElement("option");
+          optionEl.value = value;
+          optionEl.textContent = option.label;
+          optionEl.style.fontFamily = option.stack;
+          select.appendChild(optionEl);
+        }
+      }
+    }
+
+    function applyFontPreset(name, options = {}) {
+      const preset = FONT_PRESETS[name] || FONT_PRESETS.professional;
+      const updateSelect = options.updateSelect !== false;
+      for (const field of FONT_FIELDS) {
+        const selected = preset[field.key] || "system";
+        const font = FONT_OPTIONS[selected] || FONT_OPTIONS.system;
+        const select = fontEls[field.id];
+        if (select) select.value = selected;
+        els.timelineCard.style.setProperty(field.variable, font.stack);
+      }
+      if (updateSelect && els.fontPreset) els.fontPreset.value = name;
+    }
+
+    function handleFontInput(field) {
+      const select = fontEls[field.id];
+      if (!select) return;
+      const font = FONT_OPTIONS[select.value] || FONT_OPTIONS.system;
+      els.timelineCard.style.setProperty(field.variable, font.stack);
+      if (els.fontPreset) els.fontPreset.value = "custom";
+      if (state.filteredEvents.length) {
+        setStatus("Custom timeline fonts applied. Exports will use the updated fonts.");
+      }
+    }
+
+    function setStatus(message, isError = false) {
+      els.status.textContent = message;
+      els.status.classList.toggle("error", isError);
+    }
+
+
+    function applyColourPreset(name, options = {}) {
+      const preset = COLOUR_PRESETS[name] || COLOUR_PRESETS.light;
+      const updateSelect = options.updateSelect !== false;
+
+      for (const [variable, value] of Object.entries(preset)) {
+        els.timelineCard.style.setProperty(variable, value);
+      }
+
+
+      if (updateSelect && els.colourPreset) {
+        els.colourPreset.value = name;
+      }
+
+      syncColourControls();
+    }
+
+    function syncColourControls() {
+      for (const field of COLOUR_FIELDS) {
+        const input = colourEls[field.id];
+        const label = colourEls[field.labelId];
+        const value = getComputedStyle(els.timelineCard).getPropertyValue(field.variable).trim();
+
+        if (input && /^#[0-9a-f]{6}$/i.test(value)) {
+          input.value = value;
+        }
+
+        if (label) {
+          label.textContent = value || "default";
+        }
+      }
+    }
+
+    function handleColourInput(field) {
+      const input = colourEls[field.id];
+      const label = colourEls[field.labelId];
+
+      if (!input) return;
+
+      const value = input.value;
+      els.timelineCard.style.setProperty(field.variable, value);
+
+      if (label) {
+        label.textContent = value;
+      }
+
+      if (els.colourPreset) {
+        els.colourPreset.value = "custom";
+      }
+
+      if (state.filteredEvents.length) {
+        setStatus("Custom timeline colours applied. Exports will use the updated palette.");
+      }
+    }
+
+    function setDetailsOpen(detailsEl, open) {
+      if (detailsEl) {
+        detailsEl.open = Boolean(open);
+      }
+    }
+
+    function hasExactColumns(headers, requiredColumns) {
+      return requiredColumns.every((column) => headers.includes(column));
+    }
+
+    function hasExpectedWorkbookStructure(sheetName, headers) {
+      return sheetName === DEFAULTS.sheet && hasExactColumns(headers, [
+        DEFAULTS.timestampCol,
+        DEFAULTS.activityCol,
+        DEFAULTS.tacticCol,
+        DEFAULTS.visualizeCol
+      ]);
+    }
+
+    function openWorkbookSettingsForMapping() {
+      setDetailsOpen(els.workbookDetails, true);
+    }
+
+    function closeWorkbookSettingsAfterAutoMap() {
+      setDetailsOpen(els.workbookDetails, false);
+    }
+
+    function enableControls(enabled) {
+      [
+        els.sheetSelect,
+        els.timestampCol,
+        els.activityCol,
+        els.tacticCol,
+        els.visualizeCol,
+        els.visualizeValue,
+        els.ignoreVisualize,
+        els.searchInput,
+        els.sortSelect,
+        els.groupByDate,
+        els.showSourceRow,
+        els.rowSpacing,
+        els.renderButton
+      ].forEach((el) => {
+        el.disabled = !enabled;
+      });
+
+      updateActionButtons();
+    }
+
+    function updateActionButtons() {
+      const hasEvents = state.filteredEvents.length > 0;
+
+      [
+        els.svgButton,
+        els.pngButton,
+        els.printButton,
+        els.toolbarSvgButton,
+        els.toolbarPngButton,
+        els.toolbarPrintButton
+      ].forEach((button) => {
+        if (button) {
+          button.disabled = !hasEvents;
+        }
+      });
+    }
+
+    function fillSelect(select, values, preferredValue) {
+      select.innerHTML = "";
+
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value || "(empty)";
+        select.appendChild(option);
+      }
+
+      if (values.includes(preferredValue)) {
+        select.value = preferredValue;
+      } else if (values.length) {
+        select.value = values[0];
+      }
+    }
+
+    function normaliseKey(value) {
+      return String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function findPreferredColumn(headers, candidates) {
+      const exact = candidates.find((candidate) => headers.includes(candidate));
+      if (exact) return exact;
+
+      const lowerMap = new Map(headers.map((header) => [String(header).toLowerCase(), header]));
+
+      for (const candidate of candidates) {
+        const found = lowerMap.get(String(candidate).toLowerCase());
+        if (found) return found;
+      }
+
+      const fuzzy = headers.find((header) => {
+        const normalised = normaliseKey(header);
+        return candidates.some((candidate) => normaliseKey(candidate) === normalised);
+      });
+
+      return fuzzy || headers[0] || "";
+    }
+
+    async function loadFile(file) {
+      if (!file) return;
+
+      if (!window.XLSX) {
+        setStatus(
+          "SheetJS did not load. Check your internet connection or bundle xlsx.full.min.js locally.",
+          true
+        );
+        return;
+      }
+
+      try {
+        setStatus(`Reading ${file.name}...`);
+        state.fileName = file.name;
+
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, {
+          type: "array",
+          cellDates: true,
+          dense: false
+        });
+
+        state.workbook = workbook;
+        state.rows = [];
+        state.events = [];
+        state.filteredEvents = [];
+
+        fillSelect(
+          els.sheetSelect,
+          workbook.SheetNames,
+          workbook.SheetNames.includes(DEFAULTS.sheet) ? DEFAULTS.sheet : workbook.SheetNames[0]
+        );
+
+        enableControls(true);
+        const sheetLoadResult = loadSelectedSheet({ autoRender: true });
+
+        if (sheetLoadResult.autoRendered) {
+          setStatus(`Loaded ${file.name}. Auto-rendered ${state.filteredEvents.length} event(s) from the expected Timeline sheet.`);
+        } else if (sheetLoadResult.expectedStructure) {
+          setStatus(`Loaded ${file.name}. Expected sheet and columns were found, but no events were rendered. Check the Visualize filter or timestamp values.`, true);
+        } else {
+          setStatus(`Loaded ${file.name}. Workbook settings were expanded because the expected Timeline sheet/columns were not found.`);
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus(`Could not read file: ${error.message || error}`, true);
+        enableControls(false);
+      }
+    }
+
+    function loadSelectedSheet(options = {}) {
+      const sheetName = els.sheetSelect.value;
+      const sheet = state.workbook && state.workbook.Sheets[sheetName];
+
+      if (!sheet) {
+        openWorkbookSettingsForMapping();
+        setStatus(`Sheet not found: ${sheetName}`, true);
+        return { expectedStructure: false, autoRendered: false };
+      }
+
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: false
+      }).map((row, index) => ({
+        __sourceRow: index + 2,
+        ...row
+      }));
+
+      state.rows = rows;
+
+      const headers = rows.length
+        ? Object.keys(rows[0]).filter((key) => key !== "__sourceRow")
+        : extractHeadersFromSheet(sheet);
+
+      if (!headers.length) {
+        openWorkbookSettingsForMapping();
+        setStatus(`Sheet "${sheetName}" has no header row or data rows.`, true);
+        return { expectedStructure: false, autoRendered: false };
+      }
+
+      fillSelect(
+        els.timestampCol,
+        headers,
+        findPreferredColumn(headers, [
+          DEFAULTS.timestampCol,
+          "Timestamp",
+          "Timestamp UTC",
+          "Timestamp_UTC",
+          "DateTime",
+          "Date Time",
+          "Time",
+          "Date"
+        ])
+      );
+
+      fillSelect(
+        els.activityCol,
+        headers,
+        findPreferredColumn(headers, [
+          DEFAULTS.activityCol,
+          "Description",
+          "Event",
+          "Details",
+          "Message",
+          "Activity Description"
+        ])
+      );
+
+      fillSelect(
+        els.tacticCol,
+        headers,
+        findPreferredColumn(headers, [
+          DEFAULTS.tacticCol,
+          "Tactic",
+          "Category",
+          "Type",
+          "MITRE",
+          "MITRE_Tactic"
+        ])
+      );
+
+      fillSelect(
+        els.visualizeCol,
+        headers,
+        findPreferredColumn(headers, [
+          DEFAULTS.visualizeCol,
+          "Visualise",
+          "Show",
+          "Include",
+          "Render"
+        ])
+      );
+
+      const expectedStructure = hasExpectedWorkbookStructure(sheetName, headers);
+
+      if (expectedStructure) {
+        els.timestampCol.value = DEFAULTS.timestampCol;
+        els.activityCol.value = DEFAULTS.activityCol;
+        els.tacticCol.value = DEFAULTS.tacticCol;
+        els.visualizeCol.value = DEFAULTS.visualizeCol;
+        els.visualizeValue.value = DEFAULTS.visualizeValue;
+        els.ignoreVisualize.checked = false;
+        closeWorkbookSettingsAfterAutoMap();
+      } else {
+        openWorkbookSettingsForMapping();
+      }
+
+      updateStats({
+        rowsRead: rows.length,
+        eventsShown: 0,
+        skippedRows: 0,
+        badTimestamps: 0
+      });
+
+      state.events = [];
+      state.filteredEvents = [];
+      updateActionButtons();
+
+      if (expectedStructure && options.autoRender) {
+        renderTimeline();
+        return {
+          expectedStructure: true,
+          autoRendered: state.filteredEvents.length > 0
+        };
+      }
+
+      renderEmpty(
+        expectedStructure ? "Ready to render" : "Workbook mapping required",
+        expectedStructure
+          ? `Read ${rows.length} row(s) from "${sheetName}". Click Render timeline.`
+          : `Read ${rows.length} row(s) from "${sheetName}". Check the expanded Workbook settings, then render the timeline.`
+      );
+
+      return {
+        expectedStructure,
+        autoRendered: false
+      };
+    }
+
+    function extractHeadersFromSheet(sheet) {
+      const range = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+      const headers = [];
+
+      for (let col = range.s.c; col <= range.e.c; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+        const cell = sheet[address];
+        if (cell && cell.v !== undefined && String(cell.v).trim()) {
+          headers.push(String(cell.v).trim());
+        }
+      }
+
+      return headers;
+    }
+
+    function stripFractionalSecondsText(value) {
+      return String(value)
+        .trim()
+        .replace(
+          /(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\.\d+/,
+          "$1"
+        )
+        .replace(
+          /(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}):\d+/,
+          "$1"
+        );
+    }
+
+    function parseWorkbookDate(value) {
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return new Date(value.getTime());
+      }
+
+      const raw = stripFractionalSecondsText(value);
+
+      if (!raw) {
+        throw new Error("empty timestamp");
+      }
+
+      // Excel serial date fallback, useful when a workbook exposes raw numbers.
+      if (/^\d+(\.\d+)?$/.test(raw)) {
+        const serial = Number(raw);
+        if (serial > 20000 && serial < 100000) {
+          const epoch = Date.UTC(1899, 11, 30);
+          return new Date(epoch + serial * 86400000);
+        }
+      }
+
+      let isoValue = raw.replace(" ", "T");
+
+      if (/z$/i.test(isoValue)) {
+        isoValue = isoValue.replace(/z$/i, "Z");
+      }
+
+      // Date-only values should be treated as UTC midnight.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(isoValue)) {
+        isoValue = `${isoValue}T00:00:00Z`;
+      }
+
+      // Timestamp without timezone. Treat as UTC to avoid local browser timezone drift.
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(isoValue)) {
+        isoValue = `${isoValue}Z`;
+      }
+
+      const parsed = new Date(isoValue);
+
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+
+      throw new Error(`unsupported timestamp format: ${value}`);
+    }
+
+    function formatTimestamp(date, iso = false) {
+      const pad = (num) => String(num).padStart(2, "0");
+
+      const year = date.getUTCFullYear();
+      const month = pad(date.getUTCMonth() + 1);
+      const day = pad(date.getUTCDate());
+      const hour = pad(date.getUTCHours());
+      const minute = pad(date.getUTCMinutes());
+      const second = pad(date.getUTCSeconds());
+
+      return iso
+        ? `${year}-${month}-${day}T${hour}:${minute}:${second}`
+        : `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+
+    function dateGroupLabel(date) {
+      const pad = (num) => String(num).padStart(2, "0");
+      return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+    }
+
+    function cleanText(value) {
+      return String(value ?? "")
+        .replace(/\t/g, " ")
+        .replace(/\r?\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function buildEvents() {
+      const timestampCol = els.timestampCol.value;
+      const activityCol = els.activityCol.value;
+      const tacticCol = els.tacticCol.value;
+      const visualizeCol = els.visualizeCol.value;
+      const visualizeValue = cleanText(els.visualizeValue.value || DEFAULTS.visualizeValue).toLowerCase();
+      const ignoreVisualize = els.ignoreVisualize.checked;
+
+      const stats = {
+        rowsRead: state.rows.length,
+        eventsShown: 0,
+        skippedRows: 0,
+        badTimestamps: 0
+      };
+
+      const events = [];
+
+      for (const row of state.rows) {
+        const timestampRaw = row[timestampCol];
+        const activityRaw = row[activityCol];
+        const tacticRaw = row[tacticCol];
+
+        if (!ignoreVisualize) {
+          const rowVisualize = cleanText(row[visualizeCol]).toLowerCase();
+          if (rowVisualize !== visualizeValue) {
+            stats.skippedRows += 1;
+            continue;
+          }
+        }
+
+        if (!cleanText(timestampRaw) || !cleanText(activityRaw) || !cleanText(tacticRaw)) {
+          stats.skippedRows += 1;
+          continue;
+        }
+
+        try {
+          const date = parseWorkbookDate(timestampRaw);
+
+          events.push({
+            date,
+            timestamp: formatTimestamp(date, true),
+            timestampDisplay: formatTimestamp(date, false),
+            dateGroup: dateGroupLabel(date),
+            activity: cleanText(activityRaw),
+            tactic: cleanText(tacticRaw),
+            sourceRow: row.__sourceRow
+          });
+        } catch (error) {
+          stats.badTimestamps += 1;
+          stats.skippedRows += 1;
+        }
+      }
+
+      const sortDirection = els.sortSelect.value;
+      events.sort((a, b) => sortDirection === "asc"
+        ? a.date - b.date
+        : b.date - a.date
+      );
+
+      stats.eventsShown = events.length;
+      state.events = events;
+      state.stats = stats;
+
+      return events;
+    }
+
+    function filterEvents(events) {
+      const query = cleanText(els.searchInput.value).toLowerCase();
+
+      if (!query) {
+        return events;
+      }
+
+      return events.filter((event) => {
+        return [
+          event.timestampDisplay,
+          event.activity,
+          event.tactic,
+          String(event.sourceRow)
+        ].some((value) => String(value).toLowerCase().includes(query));
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeXml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function highlight(value, query) {
+      const escaped = escapeHtml(value);
+      const cleanQuery = cleanText(query);
+
+      if (!cleanQuery) {
+        return escaped;
+      }
+
+      const escapedQuery = cleanQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+      return escaped.replace(regex, "<mark>$1</mark>");
+    }
+
+    function getTimelineTitle() {
+      const title = els.timelineTitleInput
+        ? cleanText(els.timelineTitleInput.value)
+        : "";
+
+      return title || "Incident Timeline";
+    }
+
+    function updateTimelineTitle() {
+      if (els.timelineTitle) {
+        els.timelineTitle.textContent = getTimelineTitle();
+      }
+    }
+
+    function renderEmpty(title, message) {
+      els.timeline.innerHTML = `
+        <div class="empty-state">
+          <div>
+            <strong>${escapeHtml(title)}</strong>
+            ${escapeHtml(message)}
+          </div>
+        </div>
+      `;
+    }
+
+    function getRowSpacing() {
+      const rawValue = els.rowSpacing ? Number(els.rowSpacing.value) : 0;
+      return Number.isFinite(rawValue) ? rawValue : 0;
+    }
+
+    function updateRowSpacingLabel() {
+      if (!els.rowSpacingValue) {
+        return;
+      }
+
+      const spacing = getRowSpacing();
+
+      if (spacing < 0) {
+        els.rowSpacingValue.textContent = `Tighter ${Math.abs(spacing)}px`;
+      } else if (spacing > 0) {
+        els.rowSpacingValue.textContent = `Extra ${spacing}px`;
+      } else {
+        els.rowSpacingValue.textContent = "Default";
+      }
+    }
+
+    function renderTimeline() {
+      if (!state.rows.length) {
+        renderEmpty("No rows loaded", "Choose an Excel workbook or CSV file first.");
+        return;
+      }
+
+      const events = buildEvents();
+      const filtered = filterEvents(events);
+      state.filteredEvents = filtered;
+
+      const query = cleanText(els.searchInput.value);
+      updateStats({
+        ...state.stats,
+        eventsShown: filtered.length
+      });
+
+      updateActionButtons();
+
+      if (!events.length) {
+        renderEmpty(
+          "No timeline events found",
+          "Check your selected columns, timestamp format, and Visualize filter. Try Include all rows."
+        );
+        setStatus(
+          `No events found.\nRows read: ${state.stats.rowsRead}\nSkipped rows: ${state.stats.skippedRows}\nBad timestamps: ${state.stats.badTimestamps}`,
+          true
+        );
+        return;
+      }
+
+      if (!filtered.length) {
+        renderEmpty("No search results", "Clear or change the search filter.");
+        setStatus(`Rendered ${events.length} event(s), but search hid all results.`);
+        return;
+      }
+
+      updateTimelineTitle();
+      els.timelineSubtitle.textContent = `${state.fileName || "Workbook"} — ${filtered.length} event(s) shown`;
+
+      const html = els.groupByDate.checked
+        ? renderGroupedEvents(filtered, query)
+        : renderUngroupedEvents(filtered, query);
+
+      els.timeline.innerHTML = html;
+      setStatus(
+        `Rendered ${filtered.length} event(s).\nRows read: ${state.stats.rowsRead}\nSkipped rows: ${state.stats.skippedRows}\nBad timestamps: ${state.stats.badTimestamps}`
+      );
+    }
+
+    function renderGroupedEvents(events, query) {
+      const groups = new Map();
+
+      for (const event of events) {
+        if (!groups.has(event.dateGroup)) {
+          groups.set(event.dateGroup, []);
+        }
+
+        groups.get(event.dateGroup).push(event);
+      }
+
+      return Array.from(groups.entries())
+        .map(([date, groupEvents]) => `
+          <div class="date-group">
+            <div class="date-heading">${escapeHtml(date)}</div>
+            ${groupEvents.map((event, index) => renderEvent(event, query, index, groupEvents.length)).join("")}
+          </div>
+        `)
+        .join("");
+    }
+
+    function renderUngroupedEvents(events, query) {
+      return `
+        <div class="date-group">
+          ${events.map((event, index) => renderEvent(event, query, index, events.length)).join("")}
+        </div>
+      `;
+    }
+
+    function getEventLayout(event) {
+      const spacing = getRowSpacing();
+      const lines = Math.max(1, Math.ceil(event.activity.length / 100));
+
+      const bodyPadding = Math.max(0, 22 + spacing);
+      const activityMarginTop = Math.max(2, 8 + Math.round(spacing / 12));
+      const footerMarginTop = Math.max(0, 8 + Math.round(spacing / 12));
+      const activityLineHeight = spacing < 0
+        ? Math.max(1.12, 1.55 + spacing / 160)
+        : 1.55;
+
+      const activityLineHeightPx = 14 * activityLineHeight;
+      const contentHeight = 26 + activityMarginTop + lines * activityLineHeightPx + bodyPadding;
+      const minimumHeight = Math.max(42, 88 + spacing);
+
+      return {
+        height: Math.ceil(Math.max(minimumHeight, contentHeight)),
+        bodyPadding,
+        activityMarginTop,
+        footerMarginTop,
+        activityLineHeight
+      };
+    }
+
+    function getMinimumEventHeight() {
+      return Math.max(42, 88 + getRowSpacing());
+    }
+
+    function estimateEventHeight(event) {
+      return getEventLayout(event).height;
+    }
+
+    function renderEvent(event, query, index, groupLength) {
+      const classes = [
+        "event",
+        index === 0 ? "first-event" : "",
+        index === groupLength - 1 ? "last-event" : ""
+      ].filter(Boolean).join(" ");
+
+      const sourceRowHtml = els.showSourceRow.checked
+        ? `<span class="pill">Source row ${escapeHtml(event.sourceRow)}</span>`
+        : "";
+
+      const layout = getEventLayout(event);
+
+      return `
+        <div class="${classes}" style="--event-height: ${layout.height}px; --event-body-padding: ${layout.bodyPadding}px; --activity-margin-top: ${layout.activityMarginTop}px; --event-footer-margin-top: ${layout.footerMarginTop}px; --activity-line-height: ${layout.activityLineHeight}">
+          <div class="timestamp">${highlight(event.timestampDisplay, query)}</div>
+          <div class="axis"><span class="marker"></span></div>
+          <div class="event-body">
+            <div class="tactic">${highlight(event.tactic, query)}</div>
+            <div class="activity">${highlight(event.activity, query)}</div>
+            <div class="event-footer">
+              ${sourceRowHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateStats(stats) {
+      els.rowsRead.textContent = String(stats.rowsRead || 0);
+      els.eventsShown.textContent = String(stats.eventsShown || 0);
+      els.rowsSkipped.textContent = String(stats.skippedRows || 0);
+      els.badTimestamps.textContent = String(stats.badTimestamps || 0);
+    }
+
+    function getExportEvents() {
+      if (!state.filteredEvents.length) {
+        setStatus("No events to export.", true);
+        return [];
+      }
+
+      return state.filteredEvents;
+    }
+
+    function wrapSvgText(text, maxChars) {
+      const words = String(text || "").split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = "";
+
+      for (const word of words) {
+        const next = current ? `${current} ${word}` : word;
+
+        if (next.length > maxChars && current) {
+          lines.push(current);
+          current = word;
+        } else {
+          current = next;
+        }
+      }
+
+      if (current) {
+        lines.push(current);
+      }
+
+      return lines.length ? lines : [""];
+    }
+
+    function getCssColour(name, fallback) {
+      const value = getComputedStyle(els.timelineCard).getPropertyValue(name).trim();
+      return value || fallback;
+    }
+
+    function downloadSvg() {
+      const events = getExportEvents();
+      if (!events.length) return;
+
+      const width = 1200;
+      const marginTop = 70;
+      const marginBottom = 70;
+      const titleY = 34;
+      const lineX = 390;
+      const timestampX = 350;
+      const markerR = 6;
+      const contentX = 420;
+      const tacticWidth = 325;
+      const tacticHeight = 24;
+      const spacing = getRowSpacing();
+      const activityLineHeight = spacing < 0 ? 16 : 18;
+      const eventGap = 28 + spacing;
+      const minimumEventHeight = getMinimumEventHeight();
+
+      const colours = {
+        background: getCssColour("--panel", "#ffffff"),
+        line: getCssColour("--line", "#111827"),
+        marker: getCssColour("--marker", "#2563eb"),
+        timestamp: getCssColour("--timestamp", "#b00020"),
+        bar: getCssColour("--bar", "#f28c28"),
+        barText: getCssColour("--bar-text", "#ffffff"),
+        activity: getCssColour("--activity", "#111827"),
+        title: getCssColour("--text", "#111827")
+      };
+
+      const fonts = {
+        title: getCssColour("--timeline-title-font", FONT_OPTIONS.system.stack),
+        timestamp: getCssColour("--timeline-timestamp-font", FONT_OPTIONS.system.stack),
+        tactic: getCssColour("--timeline-tactic-font", FONT_OPTIONS.system.stack),
+        activity: getCssColour("--timeline-activity-font", FONT_OPTIONS.system.stack)
+      };
+
+      const layoutEvents = events.map((event) => {
+        const lines = wrapSvgText(event.activity, 92);
+        const height = Math.max(minimumEventHeight, 56 + lines.length * activityLineHeight + eventGap);
+
+        return {
+          ...event,
+          lines,
+          height
+        };
+      });
+
+      let y = marginTop;
+      for (const event of layoutEvents) {
+        event.y = y;
+        y += event.height;
+      }
+
+      const lastEvent = layoutEvents[layoutEvents.length - 1];
+      const lineStart = layoutEvents[0].y;
+      const lineEnd = lastEvent.y;
+      const height = Math.max(220, y + marginBottom);
+
+      const parts = [];
+
+      parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+      parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
+      parts.push(`<rect width="100%" height="100%" fill="${escapeXml(colours.background)}"/>`);
+
+      parts.push(`
+        <text x="${contentX}" y="${titleY}"
+          font-family="${escapeXml(fonts.title)}"
+          font-size="22"
+          font-weight="700"
+          fill="${escapeXml(colours.title)}">${escapeXml(getTimelineTitle())}</text>
+      `);
+
+      parts.push(`<line x1="${lineX}" y1="${lineStart}" x2="${lineX}" y2="${lineEnd}" stroke="${escapeXml(colours.line)}" stroke-width="2"/>`);
+
+      for (const event of layoutEvents) {
+        const eventY = event.y;
+
+        parts.push(`<circle cx="${lineX}" cy="${eventY}" r="${markerR}" fill="${escapeXml(colours.marker)}"/>`);
+
+        parts.push(`
+          <text x="${timestampX}" y="${eventY + 4}"
+            text-anchor="end"
+            font-family="${escapeXml(fonts.timestamp)}"
+            font-size="13"
+            font-weight="700"
+            fill="${escapeXml(colours.timestamp)}">${escapeXml(event.timestampDisplay)}</text>
+        `);
+
+        parts.push(`
+          <rect x="${contentX}" y="${eventY - 12}"
+            width="${tacticWidth}"
+            height="${tacticHeight}"
+            rx="3"
+            fill="${escapeXml(colours.bar)}"/>
+        `);
+
+        parts.push(`
+          <text x="${contentX + 10}" y="${eventY + 5}"
+            font-family="${escapeXml(fonts.tactic)}"
+            font-size="13"
+            font-weight="700"
+            fill="${escapeXml(colours.barText)}">${escapeXml(event.tactic)}</text>
+        `);
+
+        event.lines.forEach((line, lineIndex) => {
+          parts.push(`
+            <text x="${contentX}" y="${eventY + 34 + lineIndex * activityLineHeight}"
+              font-family="${escapeXml(fonts.activity)}"
+              font-size="13"
+              fill="${escapeXml(colours.activity)}">${escapeXml(line)}</text>
+          `);
+        });
+      }
+
+      parts.push(`</svg>`);
+
+      const blob = new Blob([parts.join("\n")], {
+        type: "image/svg+xml;charset=utf-8"
+      });
+
+      downloadBlob(blob, "timeline.svg");
+      setStatus("Downloaded SVG.");
+    }
+
+    async function downloadPng() {
+      const events = getExportEvents();
+      if (!events.length) return;
+
+      if (!window.htmlToImage) {
+        setStatus(
+          "PNG export library did not load. Check your internet connection or bundle html-to-image locally.",
+          true
+        );
+        return;
+      }
+
+      try {
+        const backgroundColor = getCssColour("--panel", "#ffffff");
+
+        const dataUrl = await htmlToImage.toPng(els.timelineCard, {
+          pixelRatio: 2,
+          backgroundColor,
+          cacheBust: true,
+          filter: (node) => {
+            // Hide toolbar action buttons and the file/event-count subtitle from exported PNG.
+            if (node.classList && node.classList.contains("button")) {
+              return false;
+            }
+
+            if (node.id === "timelineSubtitle") {
+              return false;
+            }
+
+            return true;
+          }
+        });
+
+        const anchor = document.createElement("a");
+        anchor.href = dataUrl;
+        anchor.download = "timeline.png";
+        anchor.click();
+
+        setStatus("Downloaded PNG.");
+      } catch (error) {
+        console.error(error);
+        setStatus(`Could not export PNG: ${error.message || error}`, true);
+      }
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    els.fileInput.addEventListener("change", (event) => {
+      loadFile(event.target.files[0]);
+    });
+
+    els.dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      els.dropZone.classList.add("dragover");
+    });
+
+    els.dropZone.addEventListener("dragleave", () => {
+      els.dropZone.classList.remove("dragover");
+    });
+
+    els.dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      els.dropZone.classList.remove("dragover");
+      loadFile(event.dataTransfer.files[0]);
+    });
+
+    els.sheetSelect.addEventListener("change", () => {
+      loadSelectedSheet({ autoRender: false });
+    });
+
+    [
+      els.timestampCol,
+      els.activityCol,
+      els.tacticCol,
+      els.visualizeCol,
+      els.visualizeValue,
+      els.ignoreVisualize,
+      els.sortSelect,
+      els.groupByDate,
+      els.showSourceRow,
+      els.rowSpacing
+    ].forEach((el) => {
+      el.addEventListener("change", renderTimeline);
+      el.addEventListener("input", renderTimeline);
+    });
+
+    if (els.timelineTitleInput) {
+      els.timelineTitleInput.addEventListener("input", updateTimelineTitle);
+    }
+
+    els.searchInput.addEventListener("input", renderTimeline);
+
+    if (els.rowSpacing) {
+      els.rowSpacing.addEventListener("input", () => {
+        updateRowSpacingLabel();
+        renderTimeline();
+      });
+      els.rowSpacing.addEventListener("change", updateRowSpacingLabel);
+    }
+
+    els.colourPreset.addEventListener("change", () => {
+      if (els.colourPreset.value === "custom") {
+        syncColourControls();
+        return;
+      }
+
+      applyColourPreset(els.colourPreset.value, { updateSelect: false });
+      if (state.filteredEvents.length) {
+        setStatus(`Timeline colour preset changed to ${els.colourPreset.options[els.colourPreset.selectedIndex].text}.`);
+      }
+    });
+
+    els.resetColoursButton.addEventListener("click", () => {
+      const presetName = els.colourPreset.value === "custom" ? "light" : els.colourPreset.value;
+      applyColourPreset(presetName);
+      setStatus(`Timeline colours reset to ${els.colourPreset.options[els.colourPreset.selectedIndex].text}.`);
+    });
+
+    for (const field of COLOUR_FIELDS) {
+      const input = colourEls[field.id];
+      if (input) {
+        input.addEventListener("input", () => handleColourInput(field));
+      }
+    }
+
+    els.fontPreset.addEventListener("change", () => {
+      if (els.fontPreset.value === "custom") return;
+      applyFontPreset(els.fontPreset.value, { updateSelect: false });
+      if (state.filteredEvents.length) {
+        setStatus(`Timeline font preset changed to ${els.fontPreset.options[els.fontPreset.selectedIndex].text}.`);
+      }
+    });
+
+    els.resetFontsButton.addEventListener("click", () => {
+      const presetName = els.fontPreset.value === "custom" ? "professional" : els.fontPreset.value;
+      applyFontPreset(presetName);
+      setStatus(`Timeline fonts reset to ${els.fontPreset.options[els.fontPreset.selectedIndex].text}.`);
+    });
+
+    for (const field of FONT_FIELDS) {
+      const select = fontEls[field.id];
+      if (select) select.addEventListener("change", () => handleFontInput(field));
+    }
+
+    els.renderButton.addEventListener("click", renderTimeline);
+    els.svgButton.addEventListener("click", downloadSvg);
+    els.pngButton.addEventListener("click", downloadPng);
+    els.printButton.addEventListener("click", () => window.print());
+    if (els.toolbarSvgButton) els.toolbarSvgButton.addEventListener("click", downloadSvg);
+    if (els.toolbarPngButton) els.toolbarPngButton.addEventListener("click", downloadPng);
+    if (els.toolbarPrintButton) els.toolbarPrintButton.addEventListener("click", () => window.print());
+
+    populateFontSelects();
+    applyColourPreset("light");
+    applyFontPreset("professional");
+    updateTimelineTitle();
+    updateRowSpacingLabel();
+    updateStats(state.stats);
+  </script>
+</body>
+</html>
