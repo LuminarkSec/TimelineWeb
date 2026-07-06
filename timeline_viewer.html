@@ -621,12 +621,17 @@
     .mitre-kanvas-header {
       min-height: 22px;
       padding: 4px 10px;
-      color: #ffffff;
+      color: var(--mitre-header-text, #ffffff);
       font-family: var(--timeline-tactic-font);
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
       line-height: 1.2;
+      text-shadow:
+        -1px -1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+         1px -1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+        -1px  1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+         1px  1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35));
     }
 
     .mitre-kanvas-techniques {
@@ -737,12 +742,17 @@
 
     .mitre-tactic-header {
       padding: 7px 10px;
-      color: #ffffff;
+      color: var(--mitre-header-text, #ffffff);
       font-family: var(--timeline-tactic-font);
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.03em;
+      text-shadow:
+        -1px -1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+         1px -1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+        -1px  1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35)),
+         1px  1px 0 var(--mitre-header-outline, rgba(0, 0, 0, 0.35));
     }
 
     .mitre-techniques {
@@ -2536,6 +2546,58 @@
         .filter(Boolean);
     }
 
+    function hexToRgb(hex) {
+      const clean = String(hex || "").replace("#", "").trim();
+
+      if (/^[0-9a-f]{3}$/i.test(clean)) {
+        return {
+          r: parseInt(clean[0] + clean[0], 16),
+          g: parseInt(clean[1] + clean[1], 16),
+          b: parseInt(clean[2] + clean[2], 16)
+        };
+      }
+
+      if (/^[0-9a-f]{6}$/i.test(clean)) {
+        return {
+          r: parseInt(clean.slice(0, 2), 16),
+          g: parseInt(clean.slice(2, 4), 16),
+          b: parseInt(clean.slice(4, 6), 16)
+        };
+      }
+
+      return { r: 120, g: 120, b: 120 };
+    }
+
+    function relativeLuminance(hex) {
+      const { r, g, b } = hexToRgb(hex);
+      const transform = (value) => {
+        const channel = value / 255;
+        return channel <= 0.03928
+          ? channel / 12.92
+          : Math.pow((channel + 0.055) / 1.055, 2.4);
+      };
+
+      return 0.2126 * transform(r) + 0.7152 * transform(g) + 0.0722 * transform(b);
+    }
+
+    function getContrastTextColour(backgroundColour) {
+      return relativeLuminance(backgroundColour) > 0.48
+        ? "#111827"
+        : "#ffffff";
+    }
+
+    function getTextOutlineColour(textColour) {
+      return textColour === "#111827"
+        ? "rgba(255, 255, 255, 0.45)"
+        : "rgba(0, 0, 0, 0.45)";
+    }
+
+    function getSvgTextOutlineColour(textColour) {
+      return textColour === "#111827"
+        ? "#ffffff"
+        : "#000000";
+    }
+
     function buildMitreMapping() {
       const tacticCol = els.tacticCol ? els.tacticCol.value : DEFAULTS.tacticCol;
       const techniqueCol = els.techniqueCol ? els.techniqueCol.value : DEFAULTS.techniqueCol;
@@ -2569,11 +2631,19 @@
         }
       }
 
-      const tactics = Array.from(tacticMap.entries()).map(([name, techniqueSet]) => ({
-        name,
-        colour: MITRE_TACTIC_COLOURS[name] || DEFAULT_MITRE_TACTIC_COLOUR,
-        techniques: Array.from(techniqueSet).sort((a, b) => a.localeCompare(b))
-      }));
+      const tactics = Array.from(tacticMap.entries()).map(([name, techniqueSet]) => {
+        const colour = MITRE_TACTIC_COLOURS[name] || DEFAULT_MITRE_TACTIC_COLOUR;
+        const textColour = getContrastTextColour(colour);
+
+        return {
+          name,
+          colour,
+          textColour,
+          outlineColour: getTextOutlineColour(textColour),
+          svgOutlineColour: getSvgTextOutlineColour(textColour),
+          techniques: Array.from(techniqueSet).sort((a, b) => a.localeCompare(b))
+        };
+      });
 
       tactics.sort((a, b) => {
         const aIndex = MITRE_TACTIC_ORDER.indexOf(a.name);
@@ -2616,7 +2686,7 @@
 
         return `
           <article class="mitre-tactic-card">
-            <div class="mitre-tactic-header" style="background: ${escapeHtml(tactic.colour)}">${escapeHtml(tactic.name)}</div>
+            <div class="mitre-tactic-header" style="background: ${escapeHtml(tactic.colour)}; --mitre-header-text: ${escapeHtml(tactic.textColour)}; --mitre-header-outline: ${escapeHtml(tactic.outlineColour)}">${escapeHtml(tactic.name)}</div>
             <div class="mitre-techniques">${techniques}</div>
           </article>
         `;
@@ -2638,7 +2708,7 @@
 
         return `
           <article class="mitre-kanvas-tactic">
-            <div class="mitre-kanvas-header" style="background: ${escapeHtml(tactic.colour)}">${escapeHtml(tactic.name)}</div>
+            <div class="mitre-kanvas-header" style="background: ${escapeHtml(tactic.colour)}; --mitre-header-text: ${escapeHtml(tactic.textColour)}; --mitre-header-outline: ${escapeHtml(tactic.outlineColour)}">${escapeHtml(tactic.name)}</div>
             <div class="mitre-kanvas-techniques">${techniques}</div>
           </article>
         `;
@@ -3280,7 +3350,11 @@
             font-family="${escapeXml(fonts.tactic)}"
             font-size="12"
             font-weight="800"
-            fill="#ffffff">${escapeXml(card.name.toUpperCase())}</text>
+            fill="${escapeXml(card.textColour)}"
+            stroke="${escapeXml(card.svgOutlineColour)}"
+            stroke-width="0.45"
+            paint-order="stroke"
+            stroke-linejoin="round">${escapeXml(card.name.toUpperCase())}</text>
         `);
 
         let y = card.y + layout.tacticHeaderHeight + layout.cardPadding + 12;
@@ -3336,7 +3410,11 @@
             font-family="${escapeXml(fonts.tactic)}"
             font-size="12"
             font-weight="800"
-            fill="#ffffff">${escapeXml(row.name.toUpperCase())}</text>
+            fill="${escapeXml(row.textColour)}"
+            stroke="${escapeXml(row.svgOutlineColour)}"
+            stroke-width="0.45"
+            paint-order="stroke"
+            stroke-linejoin="round">${escapeXml(row.name.toUpperCase())}</text>
         `);
 
         let y = row.y + layout.tacticHeaderHeight + layout.techniquePaddingTop + 12;
