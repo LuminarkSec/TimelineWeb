@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,10 +10,20 @@
 
     Browser-only Excel/CSV timeline viewer.
 
+    Attribution:
+      The timeline layout approach is inspired by Kanvas by WithSecureLabs,
+      licensed under the GNU General Public License v3.0.
+
+    This file is intended to be licensed under the GNU General Public License v3.0.
+
     Development note:
-      This prototype uses SheetJS and html-to-image from CDNs. For production/offline
-      use, download and bundle xlsx.full.min.js and html-to-image.min.js locally.
+      This prototype uses SheetJS, html-to-image and Rubik from CDNs. For production/offline
+      use, download and bundle xlsx.full.min.js, html-to-image.min.js and the Rubik font files locally.
   -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
@@ -530,11 +539,246 @@
       --timeline-timestamp-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --timeline-tactic-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --timeline-activity-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-title-size: 18px;
+      --timeline-title-weight: 700;
+      --timeline-subtitle-size: 13px;
+      --timeline-subtitle-weight: 400;
+      --timeline-timestamp-size: 13px;
+      --timeline-timestamp-weight: 900;
+      --timeline-tactic-size: 13px;
+      --timeline-tactic-weight: 900;
+      --timeline-tactic-transform: none;
+      --timeline-activity-size: 14px;
+      --timeline-activity-weight: 400;
       min-height: 640px;
       overflow: hidden;
       isolation: isolate;
       background: var(--panel);
       color: var(--text);
+    }
+
+    .mitre-card {
+      grid-column: 2;
+      margin-top: 20px;
+      overflow: hidden;
+      isolation: isolate;
+      background: var(--panel);
+      color: var(--text);
+      --timeline-title-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-tactic-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-activity-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --timeline-title-size: 18px;
+      --timeline-title-weight: 700;
+      --timeline-subtitle-size: 13px;
+      --timeline-subtitle-weight: 400;
+    }
+
+    .visual-header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .visual-header-actions .button {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .mini-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .mini-field select {
+      width: auto;
+      min-width: 170px;
+      height: 34px;
+      padding: 5px 8px;
+      font-size: 13px;
+    }
+
+    .mitre-kanvas-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mitre-kanvas-tactic {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+
+    .mitre-kanvas-header {
+      min-height: 22px;
+      padding: 4px 10px;
+      color: #ffffff;
+      font-family: var(--timeline-tactic-font);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    .mitre-kanvas-techniques {
+      display: grid;
+      gap: 2px;
+      padding: 6px 10px;
+      background: color-mix(in srgb, var(--panel) 94%, var(--panel-2));
+    }
+
+    .mitre-kanvas-technique {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr);
+      gap: 4px;
+      color: var(--activity);
+      font-family: var(--timeline-activity-font);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .mitre-kanvas-technique .bullet {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .mitre-map {
+      padding: 24px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .mitre-empty {
+      display: grid;
+      place-items: center;
+      min-height: 260px;
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .mitre-empty strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    .mitre-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel-2);
+    }
+
+    .mitre-count-badge {
+      display: grid;
+      place-items: center;
+      width: 76px;
+      height: 76px;
+      border-radius: 999px;
+      color: #ffffff;
+      background: #cc3333;
+      font-family: var(--timeline-title-font);
+      font-size: 26px;
+      font-weight: 800;
+      box-shadow: 0 12px 28px rgba(204, 51, 51, 0.22);
+    }
+
+    .mitre-stats-title {
+      margin: 0;
+      font-family: var(--timeline-title-font);
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .mitre-stats-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-family: var(--timeline-activity-font);
+      font-size: 13px;
+    }
+
+    .mitre-info {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-family: var(--timeline-activity-font);
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    .mitre-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+    }
+
+    .mitre-tactic-card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .mitre-tactic-header {
+      padding: 7px 10px;
+      color: #ffffff;
+      font-family: var(--timeline-tactic-font);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .mitre-techniques {
+      display: grid;
+      gap: 5px;
+      padding: 10px 12px 12px;
+    }
+
+    .mitre-technique {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr);
+      gap: 6px;
+      color: var(--activity);
+      font-family: var(--timeline-activity-font);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .mitre-technique .bullet {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .mitre-muted {
+      color: var(--muted);
+      font-family: var(--timeline-activity-font);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .mitre-footer {
+      margin-top: 16px;
+      color: var(--muted);
+      font-family: var(--timeline-activity-font);
+      font-size: 11px;
+      text-align: right;
     }
 
     .timeline-toolbar {
@@ -550,7 +794,8 @@
     .timeline-toolbar h2 {
       margin: 0;
       font-family: var(--timeline-title-font);
-      font-size: 18px;
+      font-size: var(--timeline-title-size);
+      font-weight: var(--timeline-title-weight);
       letter-spacing: -0.02em;
     }
 
@@ -559,6 +804,8 @@
       font-family: var(--timeline-activity-font);
       margin-top: 4px;
       color: var(--muted);
+      font-size: var(--timeline-subtitle-size);
+      font-weight: var(--timeline-subtitle-weight);
     }
 
     .timeline-toolbar-title {
@@ -604,7 +851,8 @@
       position: relative;
       display: grid;
       grid-template-columns: 190px 28px minmax(0, 1fr);
-      gap: 16px;
+      column-gap: 16px;
+      row-gap: 0;
       margin-top: 8px;
     }
 
@@ -640,8 +888,8 @@
       align-self: start;
       padding-top: 2px;
       color: var(--timestamp);
-      font-size: 13px;
-      font-weight: 900;
+      font-size: var(--timeline-timestamp-size);
+      font-weight: var(--timeline-timestamp-weight);
       text-align: right;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -704,8 +952,9 @@
       border-radius: 4px;
       background: var(--bar);
       color: var(--bar-text);
-      font-size: 13px;
-      font-weight: 900;
+      font-size: var(--timeline-tactic-size);
+      font-weight: var(--timeline-tactic-weight);
+      text-transform: var(--timeline-tactic-transform);
       line-height: 1.2;
       box-shadow: 0 7px 18px color-mix(in srgb, var(--bar) 20%, transparent);
     }
@@ -714,7 +963,8 @@
       margin-top: var(--activity-margin-top, 8px);
       font-family: var(--timeline-activity-font);
       color: var(--activity);
-      font-size: 14px;
+      font-size: var(--timeline-activity-size);
+      font-weight: var(--timeline-activity-weight);
       line-height: var(--activity-line-height, 1.55);
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -753,6 +1003,10 @@
 
       .controls {
         position: static;
+      }
+
+      .mitre-card {
+        grid-column: auto;
       }
 
       .date-group {
@@ -797,7 +1051,8 @@
 
       .date-group {
         grid-template-columns: 1fr;
-        gap: 8px;
+        column-gap: 8px;
+        row-gap: 0;
       }
 
       .date-heading {
@@ -851,7 +1106,8 @@
         display: block;
       }
 
-      .timeline-card {
+      .timeline-card,
+      .mitre-card {
         box-shadow: none;
         border: 0;
       }
@@ -926,6 +1182,11 @@
             <select id="activityCol" disabled></select>
           </label>
 
+          <label class="field">
+            <span>MITRE techniques</span>
+            <select id="techniqueCol" disabled></select>
+          </label>
+
           <div class="row">
             <label class="field">
               <span>Filter column</span>
@@ -954,6 +1215,16 @@
           <label class="field">
             <span>Timeline title</span>
             <input id="timelineTitleInput" type="text" value="Incident Timeline" />
+          </label>
+
+          <label class="checkbox-row">
+            <input id="exportTimelineTitle" type="checkbox" checked />
+            Include timeline title in SVG/PNG exports
+          </label>
+
+          <label class="checkbox-row">
+            <input id="exportMitreTitle" type="checkbox" checked />
+            Include MITRE title in SVG/PNG exports
           </label>
 
           <label class="field">
@@ -1009,6 +1280,8 @@
                 <option value="purple">Purple / teal</option>
                 <option value="highContrast">High contrast</option>
                 <option value="forensicAmber">Forensic amber</option>
+                <option value="brandAzure">Brand Azure</option>
+                <option value="brandMidnight">Brand Midnight</option>
                 <option value="custom">Custom</option>
               </select>
             </label>
@@ -1079,6 +1352,8 @@
                 <option value="monoTime">Monospace timestamps</option>
                 <option value="serifReport">Serif report</option>
                 <option value="allMono">All monospace</option>
+                <option value="brandRubik">Rubik brand</option>
+                <option value="brandRubikLarge">Rubik large graphic</option>
                 <option value="custom">Custom</option>
               </select>
             </label>
@@ -1087,6 +1362,7 @@
 
           <p class="control-note">
             Font choices apply only to the timeline and its SVG/PNG exports, not the rest of the page.
+            Rubik is loaded from Google Fonts in this prototype; bundle the font files locally for offline production use.
           </p>
 
           <div class="font-grid">
@@ -1148,6 +1424,35 @@
           </div>
         </div>
       </section>
+
+      <section class="card mitre-card" id="mitreCard">
+        <div class="timeline-toolbar">
+          <div>
+            <h2 id="mitreTitle">MITRE ATT&amp;CK Mapping</h2>
+            <small id="mitreSubtitle">Load a file to build the MITRE mapping.</small>
+          </div>
+          <div class="visual-header-actions">
+            <label class="mini-field">
+              <span>Layout</span>
+              <select id="mitreLayoutMode">
+                <option value="cards">Box cards</option>
+                <option value="kanvas">Kanvas-style list</option>
+              </select>
+            </label>
+            <button class="button" id="toolbarMitreSvgButton" disabled>MITRE SVG</button>
+            <button class="button" id="toolbarMitrePngButton" disabled>MITRE PNG</button>
+          </div>
+        </div>
+
+        <div id="mitreMap" class="mitre-map">
+          <div class="mitre-empty">
+            <div>
+              <strong>No MITRE mapping loaded</strong>
+              Load a workbook containing MITRE Tactic and MITRE Techniques columns.
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -1159,6 +1464,7 @@
       timestampCol: "Timestamp_UTC_0",
       activityCol: "Activity",
       tacticCol: "MITRE Tactic",
+      techniqueCol: "MITRE Techniques",
       visualizeCol: "Visualize",
       visualizeValue: "yes"
     };
@@ -1254,6 +1560,36 @@
         "--bar-text": "#fff7ed",
         "--activity": "#f8ead2",
         "--focus": "#f59e0b"
+      },
+      brandAzure: {
+        "--bg": "#f7f8ff",
+        "--panel": "#ffffff",
+        "--panel-2": "#eef0ff",
+        "--border": "#99A1F6",
+        "--text": "#0A0649",
+        "--muted": "#4957F0",
+        "--line": "#0A0649",
+        "--marker": "#190EB8",
+        "--timestamp": "#190EB8",
+        "--bar": "#190EB8",
+        "--bar-text": "#ffffff",
+        "--activity": "#0A0649",
+        "--focus": "#4957F0"
+      },
+      brandMidnight: {
+        "--bg": "#0A0649",
+        "--panel": "#0A0649",
+        "--panel-2": "#190EB8",
+        "--border": "#4957F0",
+        "--text": "#ffffff",
+        "--muted": "#99A1F6",
+        "--line": "#99A1F6",
+        "--marker": "#99A1F6",
+        "--timestamp": "#ffffff",
+        "--bar": "#4957F0",
+        "--bar-text": "#ffffff",
+        "--activity": "#ffffff",
+        "--focus": "#99A1F6"
       }
     };
 
@@ -1272,6 +1608,7 @@
 
     const FONT_OPTIONS = {
       system: { label: "System / Inter", stack: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+      rubik: { label: "Rubik", stack: 'Rubik, "Segoe UI", Arial, sans-serif' },
       aptos: { label: "Aptos", stack: 'Aptos, "Segoe UI", Arial, sans-serif' },
       calibri: { label: "Calibri", stack: 'Calibri, "Segoe UI", Arial, sans-serif' },
       segoe: { label: "Segoe UI", stack: '"Segoe UI", Arial, sans-serif' },
@@ -1285,12 +1622,60 @@
       courier: { label: "Courier New", stack: '"Courier New", Courier, monospace' }
     };
 
+    const DEFAULT_TYPE_STYLES = {
+      titleSize: "18px",
+      titleWeight: "700",
+      subtitleSize: "13px",
+      subtitleWeight: "400",
+      timestampSize: "13px",
+      timestampWeight: "900",
+      tacticSize: "13px",
+      tacticWeight: "900",
+      tacticTransform: "none",
+      activitySize: "14px",
+      activityWeight: "400"
+    };
+
     const FONT_PRESETS = {
-      professional: { title: "system", timestamp: "system", tactic: "system", activity: "system" },
-      compact: { title: "segoe", timestamp: "tahoma", tactic: "segoe", activity: "arial" },
-      monoTime: { title: "system", timestamp: "consolas", tactic: "system", activity: "system" },
-      serifReport: { title: "georgia", timestamp: "consolas", tactic: "arial", activity: "georgia" },
-      allMono: { title: "consolas", timestamp: "consolas", tactic: "consolas", activity: "consolas" }
+      professional: { title: "system", timestamp: "system", tactic: "system", activity: "system", ...DEFAULT_TYPE_STYLES },
+      compact: { title: "segoe", timestamp: "tahoma", tactic: "segoe", activity: "arial", ...DEFAULT_TYPE_STYLES, titleSize: "17px", timestampSize: "12px", tacticSize: "12px", activitySize: "13px" },
+      monoTime: { title: "system", timestamp: "consolas", tactic: "system", activity: "system", ...DEFAULT_TYPE_STYLES },
+      serifReport: { title: "georgia", timestamp: "consolas", tactic: "arial", activity: "georgia", ...DEFAULT_TYPE_STYLES },
+      allMono: { title: "consolas", timestamp: "consolas", tactic: "consolas", activity: "consolas", ...DEFAULT_TYPE_STYLES },
+      brandRubik: {
+        title: "rubik",
+        timestamp: "rubik",
+        tactic: "rubik",
+        activity: "rubik",
+        titleSize: "24px",
+        titleWeight: "500",
+        subtitleSize: "13px",
+        subtitleWeight: "400",
+        timestampSize: "12px",
+        timestampWeight: "400",
+        tacticSize: "16px",
+        tacticWeight: "700",
+        tacticTransform: "uppercase",
+        activitySize: "14px",
+        activityWeight: "400"
+      },
+      brandRubikLarge: {
+        title: "rubik",
+        timestamp: "rubik",
+        tactic: "rubik",
+        activity: "rubik",
+        titleSize: "36px",
+        titleWeight: "800",
+        subtitleSize: "18px",
+        subtitleWeight: "400",
+        timestampSize: "12px",
+        timestampWeight: "400",
+        tacticSize: "16px",
+        tacticWeight: "700",
+        tacticTransform: "uppercase",
+        activitySize: "16px",
+        activityWeight: "400"
+      }
     };
 
     const FONT_FIELDS = [
@@ -1300,12 +1685,31 @@
       { id: "fontActivity", key: "activity", variable: "--timeline-activity-font" }
     ];
 
+    const TYPE_STYLE_FIELDS = [
+      { key: "titleSize", variable: "--timeline-title-size" },
+      { key: "titleWeight", variable: "--timeline-title-weight" },
+      { key: "subtitleSize", variable: "--timeline-subtitle-size" },
+      { key: "subtitleWeight", variable: "--timeline-subtitle-weight" },
+      { key: "timestampSize", variable: "--timeline-timestamp-size" },
+      { key: "timestampWeight", variable: "--timeline-timestamp-weight" },
+      { key: "tacticSize", variable: "--timeline-tactic-size" },
+      { key: "tacticWeight", variable: "--timeline-tactic-weight" },
+      { key: "tacticTransform", variable: "--timeline-tactic-transform" },
+      { key: "activitySize", variable: "--timeline-activity-size" },
+      { key: "activityWeight", variable: "--timeline-activity-weight" }
+    ];
+
     const state = {
       fileName: "",
       workbook: null,
       rows: [],
       events: [],
       filteredEvents: [],
+      mitreMapping: {
+        tactics: [],
+        techniqueCount: 0,
+        tacticCount: 0
+      },
       stats: {
         rowsRead: 0,
         eventsShown: 0,
@@ -1329,10 +1733,13 @@
       timestampCol: document.getElementById("timestampCol"),
       activityCol: document.getElementById("activityCol"),
       tacticCol: document.getElementById("tacticCol"),
+      techniqueCol: document.getElementById("techniqueCol"),
       visualizeCol: document.getElementById("visualizeCol"),
       visualizeValue: document.getElementById("visualizeValue"),
       ignoreVisualize: document.getElementById("ignoreVisualize"),
       timelineTitleInput: document.getElementById("timelineTitleInput"),
+      exportTimelineTitle: document.getElementById("exportTimelineTitle"),
+      exportMitreTitle: document.getElementById("exportMitreTitle"),
       searchInput: document.getElementById("searchInput"),
       colourPreset: document.getElementById("colourPreset"),
       resetColoursButton: document.getElementById("resetColoursButton"),
@@ -1354,10 +1761,19 @@
       toolbarSvgButton: document.getElementById("toolbarSvgButton"),
       toolbarPngButton: document.getElementById("toolbarPngButton"),
       toolbarPrintButton: document.getElementById("toolbarPrintButton"),
+      mitreSvgButton: document.getElementById("mitreSvgButton"),
+      mitrePngButton: document.getElementById("mitrePngButton"),
+      toolbarMitreSvgButton: document.getElementById("toolbarMitreSvgButton"),
+      toolbarMitrePngButton: document.getElementById("toolbarMitrePngButton"),
       timelineCard: document.getElementById("timelineCard"),
       timeline: document.getElementById("timeline"),
       timelineTitle: document.getElementById("timelineTitle"),
       timelineSubtitle: document.getElementById("timelineSubtitle"),
+      mitreCard: document.getElementById("mitreCard"),
+      mitreMap: document.getElementById("mitreMap"),
+      mitreTitle: document.getElementById("mitreTitle"),
+      mitreSubtitle: document.getElementById("mitreSubtitle"),
+      mitreLayoutMode: document.getElementById("mitreLayoutMode"),
       rowsRead: document.getElementById("rowsRead"),
       eventsShown: document.getElementById("eventsShown"),
       rowsSkipped: document.getElementById("rowsSkipped"),
@@ -1393,13 +1809,26 @@
     function applyFontPreset(name, options = {}) {
       const preset = FONT_PRESETS[name] || FONT_PRESETS.professional;
       const updateSelect = options.updateSelect !== false;
+
       for (const field of FONT_FIELDS) {
         const selected = preset[field.key] || "system";
         const font = FONT_OPTIONS[selected] || FONT_OPTIONS.system;
         const select = fontEls[field.id];
         if (select) select.value = selected;
         els.timelineCard.style.setProperty(field.variable, font.stack);
+        if (els.mitreCard) {
+          els.mitreCard.style.setProperty(field.variable, font.stack);
+        }
       }
+
+      for (const field of TYPE_STYLE_FIELDS) {
+        const value = preset[field.key] || DEFAULT_TYPE_STYLES[field.key];
+        els.timelineCard.style.setProperty(field.variable, value);
+        if (els.mitreCard) {
+          els.mitreCard.style.setProperty(field.variable, value);
+        }
+      }
+
       if (updateSelect && els.fontPreset) els.fontPreset.value = name;
     }
 
@@ -1426,6 +1855,9 @@
 
       for (const [variable, value] of Object.entries(preset)) {
         els.timelineCard.style.setProperty(variable, value);
+        if (els.mitreCard) {
+          els.mitreCard.style.setProperty(variable, value);
+        }
       }
 
 
@@ -1460,6 +1892,9 @@
 
       const value = input.value;
       els.timelineCard.style.setProperty(field.variable, value);
+      if (els.mitreCard) {
+        els.mitreCard.style.setProperty(field.variable, value);
+      }
 
       if (label) {
         label.textContent = value;
@@ -1507,6 +1942,7 @@
         els.timestampCol,
         els.activityCol,
         els.tacticCol,
+        els.techniqueCol,
         els.visualizeCol,
         els.visualizeValue,
         els.ignoreVisualize,
@@ -1525,6 +1961,7 @@
 
     function updateActionButtons() {
       const hasEvents = state.filteredEvents.length > 0;
+      const hasMitre = state.mitreMapping && state.mitreMapping.tacticCount > 0;
 
       [
         els.svgButton,
@@ -1536,6 +1973,17 @@
       ].forEach((button) => {
         if (button) {
           button.disabled = !hasEvents;
+        }
+      });
+
+      [
+        els.mitreSvgButton,
+        els.mitrePngButton,
+        els.toolbarMitreSvgButton,
+        els.toolbarMitrePngButton
+      ].forEach((button) => {
+        if (button) {
+          button.disabled = !hasMitre;
         }
       });
     }
@@ -1702,6 +2150,20 @@
       );
 
       fillSelect(
+        els.techniqueCol,
+        headers,
+        findPreferredColumn(headers, [
+          DEFAULTS.techniqueCol,
+          "MITRE Technique",
+          "MITRE_Techniques",
+          "Techniques",
+          "Technique",
+          "ATT&CK Techniques",
+          "Attack Techniques"
+        ])
+      );
+
+      fillSelect(
         els.visualizeCol,
         headers,
         findPreferredColumn(headers, [
@@ -1719,6 +2181,9 @@
         els.timestampCol.value = DEFAULTS.timestampCol;
         els.activityCol.value = DEFAULTS.activityCol;
         els.tacticCol.value = DEFAULTS.tacticCol;
+        if (els.techniqueCol && headers.includes(DEFAULTS.techniqueCol)) {
+          els.techniqueCol.value = DEFAULTS.techniqueCol;
+        }
         els.visualizeCol.value = DEFAULTS.visualizeCol;
         els.visualizeValue.value = DEFAULTS.visualizeValue;
         els.ignoreVisualize.checked = false;
@@ -1736,6 +2201,12 @@
 
       state.events = [];
       state.filteredEvents = [];
+      state.mitreMapping = {
+        tactics: [],
+        techniqueCount: 0,
+        tacticCount: 0
+      };
+      renderMitreEmpty("MITRE mapping not rendered", "Render the timeline to build the MITRE mapping.");
       updateActionButtons();
 
       if (expectedStructure && options.autoRender) {
@@ -1989,6 +2460,235 @@
       }
     }
 
+    function shouldExportTimelineTitle() {
+      return !els.exportTimelineTitle || els.exportTimelineTitle.checked;
+    }
+
+    function shouldExportMitreTitle() {
+      return !els.exportMitreTitle || els.exportMitreTitle.checked;
+    }
+
+    const MITRE_TACTIC_ORDER = [
+      "Reconnaissance",
+      "Resource Development",
+      "Initial Access",
+      "Execution",
+      "Persistence",
+      "Privilege Escalation",
+      "Defense Evasion",
+      "Credential Access",
+      "Discovery",
+      "Lateral Movement",
+      "Collection",
+      "Command and Control",
+      "Exfiltration",
+      "Impact"
+    ];
+
+    const MITRE_TACTIC_COLOURS = {
+      "Initial Access": "#e57373",
+      "Execution": "#FFB74D",
+      "Persistence": "#FFF176",
+      "Privilege Escalation": "#AED581",
+      "Defense Evasion": "#4FC3F7",
+      "Credential Access": "#FF8A65",
+      "Discovery": "#9575CD",
+      "Lateral Movement": "#4DB6AC",
+      "Collection": "#F06292",
+      "Command and Control": "#7986CB",
+      "Exfiltration": "#A1887F",
+      "Impact": "#90A4AE",
+      "Reconnaissance": "#64B5F6",
+      "Resource Development": "#81C784"
+    };
+
+    const DEFAULT_MITRE_TACTIC_COLOUR = "#78909C";
+
+    function renderMitreEmpty(title, message) {
+      if (!els.mitreMap) {
+        return;
+      }
+
+      els.mitreMap.innerHTML = `
+        <div class="mitre-empty">
+          <div>
+            <strong>${escapeHtml(title)}</strong>
+            ${escapeHtml(message)}
+          </div>
+        </div>
+      `;
+
+      if (els.mitreSubtitle) {
+        els.mitreSubtitle.textContent = message;
+      }
+    }
+
+    function splitTechniqueValue(value) {
+      const text = cleanText(value);
+      if (!text) {
+        return [];
+      }
+
+      return text
+        .split(/\s*(?:\r?\n|;|\|)\s*/)
+        .map((item) => cleanText(item))
+        .filter(Boolean);
+    }
+
+    function buildMitreMapping() {
+      const tacticCol = els.tacticCol ? els.tacticCol.value : DEFAULTS.tacticCol;
+      const techniqueCol = els.techniqueCol ? els.techniqueCol.value : DEFAULTS.techniqueCol;
+      const ignoreVisualize = els.ignoreVisualize && els.ignoreVisualize.checked;
+      const visualizeCol = els.visualizeCol ? els.visualizeCol.value : DEFAULTS.visualizeCol;
+      const visualizeValue = cleanText(els.visualizeValue ? els.visualizeValue.value : DEFAULTS.visualizeValue).toLowerCase();
+
+      const tacticMap = new Map();
+
+      for (const row of state.rows) {
+        if (!ignoreVisualize) {
+          const rowVisualize = cleanText(row[visualizeCol]).toLowerCase();
+          if (rowVisualize !== visualizeValue) {
+            continue;
+          }
+        }
+
+        const tactic = cleanText(row[tacticCol]);
+        if (!tactic) {
+          continue;
+        }
+
+        if (!tacticMap.has(tactic)) {
+          tacticMap.set(tactic, new Set());
+        }
+
+        const techniques = splitTechniqueValue(row[techniqueCol]);
+
+        for (const technique of techniques) {
+          tacticMap.get(tactic).add(technique);
+        }
+      }
+
+      const tactics = Array.from(tacticMap.entries()).map(([name, techniqueSet]) => ({
+        name,
+        colour: MITRE_TACTIC_COLOURS[name] || DEFAULT_MITRE_TACTIC_COLOUR,
+        techniques: Array.from(techniqueSet).sort((a, b) => a.localeCompare(b))
+      }));
+
+      tactics.sort((a, b) => {
+        const aIndex = MITRE_TACTIC_ORDER.indexOf(a.name);
+        const bIndex = MITRE_TACTIC_ORDER.indexOf(b.name);
+
+        if (aIndex === -1 && bIndex === -1) {
+          return a.name.localeCompare(b.name);
+        }
+
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+
+      const techniqueCount = tactics.reduce((total, tactic) => total + tactic.techniques.length, 0);
+
+      state.mitreMapping = {
+        tactics,
+        techniqueCount,
+        tacticCount: tactics.length
+      };
+
+      return state.mitreMapping;
+    }
+
+    function getMitreLayoutMode() {
+      return els.mitreLayoutMode ? els.mitreLayoutMode.value : "cards";
+    }
+
+    function renderMitreCardsHtml(mapping) {
+      const tacticCards = mapping.tactics.map((tactic) => {
+        const techniques = tactic.techniques.length
+          ? tactic.techniques.map((technique) => `
+              <div class="mitre-technique">
+                <span class="bullet">•</span>
+                <span>${escapeHtml(technique)}</span>
+              </div>
+            `).join("")
+          : `<div class="mitre-muted">No specific techniques identified</div>`;
+
+        return `
+          <article class="mitre-tactic-card">
+            <div class="mitre-tactic-header" style="background: ${escapeHtml(tactic.colour)}">${escapeHtml(tactic.name)}</div>
+            <div class="mitre-techniques">${techniques}</div>
+          </article>
+        `;
+      }).join("");
+
+      return `<div class="mitre-grid">${tacticCards}</div>`;
+    }
+
+    function renderMitreKanvasHtml(mapping) {
+      const tacticRows = mapping.tactics.map((tactic) => {
+        const techniques = tactic.techniques.length
+          ? tactic.techniques.map((technique) => `
+              <div class="mitre-kanvas-technique">
+                <span class="bullet">•</span>
+                <span>${escapeHtml(technique)}</span>
+              </div>
+            `).join("")
+          : `<div class="mitre-muted">No specific techniques identified</div>`;
+
+        return `
+          <article class="mitre-kanvas-tactic">
+            <div class="mitre-kanvas-header" style="background: ${escapeHtml(tactic.colour)}">${escapeHtml(tactic.name)}</div>
+            <div class="mitre-kanvas-techniques">${techniques}</div>
+          </article>
+        `;
+      }).join("");
+
+      return `<div class="mitre-kanvas-list">${tacticRows}</div>`;
+    }
+
+    function renderMitreMapping() {
+      if (!els.mitreMap) {
+        return;
+      }
+
+      const mapping = buildMitreMapping();
+      const layoutMode = getMitreLayoutMode();
+      updateActionButtons();
+
+      if (!mapping.tacticCount) {
+        renderMitreEmpty(
+          "No MITRE mapping found",
+          "No MITRE tactics were found using the current sheet, columns, and row filter."
+        );
+        return;
+      }
+
+      if (els.mitreTitle) {
+        els.mitreTitle.textContent = "MITRE ATT&CK Mapping";
+      }
+
+      if (els.mitreSubtitle) {
+        const layoutLabel = layoutMode === "kanvas" ? "Kanvas-style list" : "box card layout";
+        els.mitreSubtitle.textContent = `${mapping.tacticCount} tactic(s), ${mapping.techniqueCount} unique technique(s) — ${layoutLabel}`;
+      }
+
+      const bodyHtml = layoutMode === "kanvas"
+        ? renderMitreKanvasHtml(mapping)
+        : renderMitreCardsHtml(mapping);
+
+      els.mitreMap.innerHTML = `
+        <div class="mitre-stats">
+          <div class="mitre-count-badge">${escapeHtml(mapping.techniqueCount)}</div>
+          <div>
+            <p class="mitre-stats-title">Detections Mapped</p>
+            <p class="mitre-stats-subtitle">${escapeHtml(mapping.tacticCount)} tactic(s), ${escapeHtml(mapping.techniqueCount)} unique technique(s)</p>
+          </div>
+        </div>
+        <p class="mitre-info">The following MITRE ATT&CK tactics and techniques were identified from the loaded timeline data.</p>
+        ${bodyHtml}
+      `;
+    }
+
     function renderEmpty(title, message) {
       els.timeline.innerHTML = `
         <div class="empty-state">
@@ -2048,6 +2748,7 @@
           `No events found.\nRows read: ${state.stats.rowsRead}\nSkipped rows: ${state.stats.skippedRows}\nBad timestamps: ${state.stats.badTimestamps}`,
           true
         );
+        renderMitreMapping();
         return;
       }
 
@@ -2065,6 +2766,8 @@
         : renderUngroupedEvents(filtered, query);
 
       els.timeline.innerHTML = html;
+      renderMitreMapping();
+
       setStatus(
         `Rendered ${filtered.length} event(s).\nRows read: ${state.stats.rowsRead}\nSkipped rows: ${state.stats.skippedRows}\nBad timestamps: ${state.stats.badTimestamps}`
       );
@@ -2240,6 +2943,18 @@
         activity: getCssColour("--timeline-activity-font", FONT_OPTIONS.system.stack)
       };
 
+      const typeStyles = {
+        titleSize: getCssColour("--timeline-title-size", "22px"),
+        titleWeight: getCssColour("--timeline-title-weight", "700"),
+        timestampSize: getCssColour("--timeline-timestamp-size", "13px"),
+        timestampWeight: getCssColour("--timeline-timestamp-weight", "700"),
+        tacticSize: getCssColour("--timeline-tactic-size", "13px"),
+        tacticWeight: getCssColour("--timeline-tactic-weight", "700"),
+        tacticTransform: getCssColour("--timeline-tactic-transform", "none"),
+        activitySize: getCssColour("--timeline-activity-size", "13px"),
+        activityWeight: getCssColour("--timeline-activity-weight", "400")
+      };
+
       const layoutEvents = events.map((event) => {
         const lines = wrapSvgText(event.activity, 92);
         const height = Math.max(minimumEventHeight, 56 + lines.length * activityLineHeight + eventGap);
@@ -2268,13 +2983,15 @@
       parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
       parts.push(`<rect width="100%" height="100%" fill="${escapeXml(colours.background)}"/>`);
 
-      parts.push(`
-        <text x="${contentX}" y="${titleY}"
-          font-family="${escapeXml(fonts.title)}"
-          font-size="22"
-          font-weight="700"
-          fill="${escapeXml(colours.title)}">${escapeXml(getTimelineTitle())}</text>
-      `);
+      if (shouldExportTimelineTitle()) {
+        parts.push(`
+          <text x="${contentX}" y="${titleY}"
+            font-family="${escapeXml(fonts.title)}"
+            font-size="${escapeXml(typeStyles.titleSize)}"
+            font-weight="${escapeXml(typeStyles.titleWeight)}"
+            fill="${escapeXml(colours.title)}">${escapeXml(getTimelineTitle())}</text>
+        `);
+      }
 
       parts.push(`<line x1="${lineX}" y1="${lineStart}" x2="${lineX}" y2="${lineEnd}" stroke="${escapeXml(colours.line)}" stroke-width="2"/>`);
 
@@ -2287,8 +3004,8 @@
           <text x="${timestampX}" y="${eventY + 4}"
             text-anchor="end"
             font-family="${escapeXml(fonts.timestamp)}"
-            font-size="13"
-            font-weight="700"
+            font-size="${escapeXml(typeStyles.timestampSize)}"
+            font-weight="${escapeXml(typeStyles.timestampWeight)}"
             fill="${escapeXml(colours.timestamp)}">${escapeXml(event.timestampDisplay)}</text>
         `);
 
@@ -2303,16 +3020,17 @@
         parts.push(`
           <text x="${contentX + 10}" y="${eventY + 5}"
             font-family="${escapeXml(fonts.tactic)}"
-            font-size="13"
-            font-weight="700"
-            fill="${escapeXml(colours.barText)}">${escapeXml(event.tactic)}</text>
+            font-size="${escapeXml(typeStyles.tacticSize)}"
+            font-weight="${escapeXml(typeStyles.tacticWeight)}"
+            fill="${escapeXml(colours.barText)}">${escapeXml(typeStyles.tacticTransform === "uppercase" ? event.tactic.toUpperCase() : event.tactic)}</text>
         `);
 
         event.lines.forEach((line, lineIndex) => {
           parts.push(`
             <text x="${contentX}" y="${eventY + 34 + lineIndex * activityLineHeight}"
               font-family="${escapeXml(fonts.activity)}"
-              font-size="13"
+              font-size="${escapeXml(typeStyles.activitySize)}"
+              font-weight="${escapeXml(typeStyles.activityWeight)}"
               fill="${escapeXml(colours.activity)}">${escapeXml(line)}</text>
           `);
         });
@@ -2348,12 +3066,16 @@
           backgroundColor,
           cacheBust: true,
           filter: (node) => {
-            // Hide toolbar action buttons and the file/event-count subtitle from exported PNG.
+            // Hide toolbar action buttons and export-only optional title/subtitle elements from exported PNG.
             if (node.classList && node.classList.contains("button")) {
               return false;
             }
 
             if (node.id === "timelineSubtitle") {
+              return false;
+            }
+
+            if (!shouldExportTimelineTitle() && node.id === "timelineTitle") {
               return false;
             }
 
@@ -2370,6 +3092,371 @@
       } catch (error) {
         console.error(error);
         setStatus(`Could not export PNG: ${error.message || error}`, true);
+      }
+    }
+
+    function calculateMitreCardsSvgLayout(mapping) {
+      const width = 1200;
+      const margin = 44;
+      const headerHeight = 136;
+      const footerHeight = 42;
+      const gap = 14;
+      const columns = 3;
+      const columnWidth = Math.floor((width - margin * 2 - gap * (columns - 1)) / columns);
+      const tacticHeaderHeight = 30;
+      const techniqueLineHeight = 18;
+      const cardPadding = 14;
+      const cardGap = 14;
+
+      const cards = mapping.tactics.map((tactic) => {
+        const techniqueLines = tactic.techniques.length
+          ? tactic.techniques.flatMap((technique) => wrapSvgText(technique, 34).map((line, index) => ({
+              text: line,
+              isContinuation: index > 0
+            })))
+          : [{ text: "No specific techniques identified", muted: true }];
+
+        const height = tacticHeaderHeight + cardPadding + Math.max(1, techniqueLines.length) * techniqueLineHeight + cardPadding;
+
+        return {
+          ...tactic,
+          techniqueLines,
+          height
+        };
+      });
+
+      const columnHeights = Array(columns).fill(headerHeight);
+      cards.forEach((card, index) => {
+        const column = index % columns;
+        card.x = margin + column * (columnWidth + gap);
+        card.y = columnHeights[column];
+        card.width = columnWidth;
+        columnHeights[column] += card.height + cardGap;
+      });
+
+      const height = Math.max(360, Math.max(...columnHeights) + footerHeight + margin);
+
+      return {
+        width,
+        height,
+        margin,
+        headerHeight,
+        footerHeight,
+        columnWidth,
+        tacticHeaderHeight,
+        techniqueLineHeight,
+        cardPadding,
+        cards
+      };
+    }
+
+    function calculateMitreKanvasSvgLayout(mapping) {
+      const width = 900;
+      const margin = 44;
+      const headerHeight = 136;
+      const footerHeight = 42;
+      const tacticWidth = width - margin * 2;
+      const tacticHeaderHeight = 24;
+      const techniqueLineHeight = 17;
+      const techniquePaddingTop = 8;
+      const techniquePaddingBottom = 8;
+      const tacticGap = 12;
+
+      let y = headerHeight;
+      const rows = mapping.tactics.map((tactic) => {
+        const techniqueLines = tactic.techniques.length
+          ? tactic.techniques.flatMap((technique) => wrapSvgText(technique, 90).map((line, index) => ({
+              text: line,
+              isContinuation: index > 0
+            })))
+          : [{ text: "No specific techniques identified", muted: true }];
+
+        const bodyHeight = techniquePaddingTop + Math.max(1, techniqueLines.length) * techniqueLineHeight + techniquePaddingBottom;
+        const height = tacticHeaderHeight + bodyHeight;
+        const row = {
+          ...tactic,
+          x: margin,
+          y,
+          width: tacticWidth,
+          height,
+          bodyHeight,
+          techniqueLines
+        };
+
+        y += height + tacticGap;
+        return row;
+      });
+
+      const height = Math.max(360, y + footerHeight + margin);
+
+      return {
+        width,
+        height,
+        margin,
+        headerHeight,
+        footerHeight,
+        tacticHeaderHeight,
+        techniqueLineHeight,
+        techniquePaddingTop,
+        rows
+      };
+    }
+
+    function buildMitreSvgHeaderParts(mapping, layout, fonts, colours) {
+      const parts = [];
+
+      parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+      parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`);
+      parts.push(`<rect width="100%" height="100%" fill="${escapeXml(colours.background)}"/>`);
+
+      if (shouldExportMitreTitle()) {
+        parts.push(`
+          <text x="${layout.margin}" y="48"
+            font-family="${escapeXml(fonts.title)}"
+            font-size="28"
+            font-weight="700"
+            fill="${escapeXml(colours.text)}">MITRE ATT&amp;CK Mapping</text>
+        `);
+      }
+
+      parts.push(`<circle cx="${layout.margin + 38}" cy="94" r="34" fill="#cc3333"/>`);
+      parts.push(`
+        <text x="${layout.margin + 38}" y="104"
+          text-anchor="middle"
+          font-family="${escapeXml(fonts.title)}"
+          font-size="26"
+          font-weight="800"
+          fill="#ffffff">${escapeXml(mapping.techniqueCount)}</text>
+      `);
+
+      parts.push(`
+        <text x="${layout.margin + 88}" y="92"
+          font-family="${escapeXml(fonts.title)}"
+          font-size="20"
+          font-weight="700"
+          fill="${escapeXml(colours.text)}">Detections Mapped</text>
+      `);
+
+      parts.push(`
+        <text x="${layout.margin + 88}" y="115"
+          font-family="${escapeXml(fonts.activity)}"
+          font-size="13"
+          fill="${escapeXml(colours.muted)}">${escapeXml(mapping.tacticCount)} tactic(s), ${escapeXml(mapping.techniqueCount)} unique technique(s)</text>
+      `);
+
+      return parts;
+    }
+
+    function getMitreSvgStyles() {
+      return {
+        colours: {
+          background: getCssColour("--panel", "#ffffff"),
+          panelTwo: getCssColour("--panel-2", "#f9fafb"),
+          border: getCssColour("--border", "#d7dce5"),
+          text: getCssColour("--text", "#111827"),
+          muted: getCssColour("--muted", "#6b7280"),
+          activity: getCssColour("--activity", "#111827")
+        },
+        fonts: {
+          title: getCssColour("--timeline-title-font", FONT_OPTIONS.system.stack),
+          tactic: getCssColour("--timeline-tactic-font", FONT_OPTIONS.system.stack),
+          activity: getCssColour("--timeline-activity-font", FONT_OPTIONS.system.stack)
+        }
+      };
+    }
+
+    function buildMitreCardsSvgString(mapping) {
+      const layout = calculateMitreCardsSvgLayout(mapping);
+      const { colours, fonts } = getMitreSvgStyles();
+      const parts = buildMitreSvgHeaderParts(mapping, layout, fonts, colours);
+
+      for (const card of layout.cards) {
+        const radius = 12;
+        parts.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="${radius}" fill="${escapeXml(colours.background)}" stroke="${escapeXml(colours.border)}"/>`);
+        parts.push(`<path d="M ${card.x + radius} ${card.y} H ${card.x + card.width - radius} Q ${card.x + card.width} ${card.y} ${card.x + card.width} ${card.y + radius} V ${card.y + layout.tacticHeaderHeight} H ${card.x} V ${card.y + radius} Q ${card.x} ${card.y} ${card.x + radius} ${card.y}" fill="${escapeXml(card.colour)}"/>`);
+        parts.push(`
+          <text x="${card.x + 10}" y="${card.y + 20}"
+            font-family="${escapeXml(fonts.tactic)}"
+            font-size="12"
+            font-weight="800"
+            fill="#ffffff">${escapeXml(card.name.toUpperCase())}</text>
+        `);
+
+        let y = card.y + layout.tacticHeaderHeight + layout.cardPadding + 12;
+
+        for (const line of card.techniqueLines) {
+          const lineColour = line.muted ? colours.muted : colours.activity;
+          const bullet = line.isContinuation || line.muted ? "" : "•";
+
+          if (bullet) {
+            parts.push(`
+              <text x="${card.x + 12}" y="${y}"
+                font-family="${escapeXml(fonts.activity)}"
+                font-size="12"
+                fill="${escapeXml(colours.muted)}">•</text>
+            `);
+          }
+
+          parts.push(`
+            <text x="${card.x + 28}" y="${y}"
+              font-family="${escapeXml(fonts.activity)}"
+              font-size="12"
+              font-style="${line.muted ? "italic" : "normal"}"
+              fill="${escapeXml(lineColour)}">${escapeXml(line.text)}</text>
+          `);
+
+          y += layout.techniqueLineHeight;
+        }
+      }
+
+      parts.push(`
+        <text x="${layout.width - layout.margin}" y="${layout.height - 18}"
+          text-anchor="end"
+          font-family="${escapeXml(fonts.activity)}"
+          font-size="11"
+          fill="${escapeXml(colours.muted)}"></text>
+      `);
+
+      parts.push(`</svg>`);
+      return parts.join("\n");
+    }
+
+    function buildMitreKanvasSvgString(mapping) {
+      const layout = calculateMitreKanvasSvgLayout(mapping);
+      const { colours, fonts } = getMitreSvgStyles();
+      const parts = buildMitreSvgHeaderParts(mapping, layout, fonts, colours);
+
+      for (const row of layout.rows) {
+        const radius = 6;
+        parts.push(`<rect x="${row.x}" y="${row.y}" width="${row.width}" height="${row.height}" rx="${radius}" fill="${escapeXml(colours.background)}" stroke="${escapeXml(colours.border)}"/>`);
+        parts.push(`<path d="M ${row.x + radius} ${row.y} H ${row.x + row.width - radius} Q ${row.x + row.width} ${row.y} ${row.x + row.width} ${row.y + radius} V ${row.y + layout.tacticHeaderHeight} H ${row.x} V ${row.y + radius} Q ${row.x} ${row.y} ${row.x + radius} ${row.y}" fill="${escapeXml(row.colour)}"/>`);
+        parts.push(`
+          <text x="${row.x + 10}" y="${row.y + 17}"
+            font-family="${escapeXml(fonts.tactic)}"
+            font-size="12"
+            font-weight="800"
+            fill="#ffffff">${escapeXml(row.name.toUpperCase())}</text>
+        `);
+
+        let y = row.y + layout.tacticHeaderHeight + layout.techniquePaddingTop + 12;
+
+        for (const line of row.techniqueLines) {
+          const lineColour = line.muted ? colours.muted : colours.activity;
+          const bullet = line.isContinuation || line.muted ? "" : "•";
+
+          if (bullet) {
+            parts.push(`
+              <text x="${row.x + 12}" y="${y}"
+                font-family="${escapeXml(fonts.activity)}"
+                font-size="12"
+                fill="${escapeXml(colours.muted)}">•</text>
+            `);
+          }
+
+          parts.push(`
+            <text x="${row.x + 28}" y="${y}"
+              font-family="${escapeXml(fonts.activity)}"
+              font-size="12"
+              font-style="${line.muted ? "italic" : "normal"}"
+              fill="${escapeXml(lineColour)}">${escapeXml(line.text)}</text>
+          `);
+
+          y += layout.techniqueLineHeight;
+        }
+      }
+
+      parts.push(`
+        <text x="${layout.width - layout.margin}" y="${layout.height - 18}"
+          text-anchor="end"
+          font-family="${escapeXml(fonts.activity)}"
+          font-size="11"
+          fill="${escapeXml(colours.muted)}"></text>
+      `);
+
+      parts.push(`</svg>`);
+      return parts.join("\n");
+    }
+
+    function buildMitreSvgString() {
+      const mapping = state.mitreMapping && state.mitreMapping.tacticCount
+        ? state.mitreMapping
+        : buildMitreMapping();
+
+      if (!mapping.tacticCount) {
+        setStatus("No MITRE mapping to export.", true);
+        return "";
+      }
+
+      return getMitreLayoutMode() === "kanvas"
+        ? buildMitreKanvasSvgString(mapping)
+        : buildMitreCardsSvgString(mapping);
+    }
+
+    function downloadMitreSvg() {
+      const svg = buildMitreSvgString();
+      if (!svg) return;
+
+      const blob = new Blob([svg], {
+        type: "image/svg+xml;charset=utf-8"
+      });
+
+      downloadBlob(blob, "mitre_attack_mapping.svg");
+      setStatus("Downloaded MITRE SVG.");
+    }
+
+    async function downloadMitrePng() {
+      const mapping = state.mitreMapping && state.mitreMapping.tacticCount
+        ? state.mitreMapping
+        : buildMitreMapping();
+
+      if (!mapping.tacticCount) {
+        setStatus("No MITRE mapping to export.", true);
+        return;
+      }
+
+      if (!window.htmlToImage) {
+        setStatus(
+          "PNG export library did not load. Check your internet connection or bundle html-to-image locally.",
+          true
+        );
+        return;
+      }
+
+      renderMitreMapping();
+
+      try {
+        const backgroundColor = getCssColour("--panel", "#ffffff");
+
+        const dataUrl = await htmlToImage.toPng(els.mitreCard, {
+          pixelRatio: 2,
+          backgroundColor,
+          cacheBust: true,
+          filter: (node) => {
+            if (node.classList && node.classList.contains("button")) {
+              return false;
+            }
+
+            if (node.id === "mitreSubtitle") {
+              return false;
+            }
+
+            if (!shouldExportMitreTitle() && node.id === "mitreTitle") {
+              return false;
+            }
+
+            return true;
+          }
+        });
+
+        const anchor = document.createElement("a");
+        anchor.href = dataUrl;
+        anchor.download = "mitre_attack_mapping.png";
+        anchor.click();
+
+        setStatus("Downloaded MITRE PNG.");
+      } catch (error) {
+        console.error(error);
+        setStatus(`Could not export MITRE PNG: ${error.message || error}`, true);
       }
     }
 
@@ -2411,6 +3498,7 @@
       els.timestampCol,
       els.activityCol,
       els.tacticCol,
+      els.techniqueCol,
       els.visualizeCol,
       els.visualizeValue,
       els.ignoreVisualize,
@@ -2488,6 +3576,16 @@
     if (els.toolbarSvgButton) els.toolbarSvgButton.addEventListener("click", downloadSvg);
     if (els.toolbarPngButton) els.toolbarPngButton.addEventListener("click", downloadPng);
     if (els.toolbarPrintButton) els.toolbarPrintButton.addEventListener("click", () => window.print());
+    if (els.mitreSvgButton) els.mitreSvgButton.addEventListener("click", downloadMitreSvg);
+    if (els.mitrePngButton) els.mitrePngButton.addEventListener("click", downloadMitrePng);
+    if (els.toolbarMitreSvgButton) els.toolbarMitreSvgButton.addEventListener("click", downloadMitreSvg);
+    if (els.toolbarMitrePngButton) els.toolbarMitrePngButton.addEventListener("click", downloadMitrePng);
+
+    if (els.mitreLayoutMode) {
+      els.mitreLayoutMode.addEventListener("change", () => {
+        renderMitreMapping();
+      });
+    }
 
     populateFontSelects();
     applyColourPreset("light");
