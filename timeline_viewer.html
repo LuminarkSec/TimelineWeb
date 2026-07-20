@@ -3108,7 +3108,7 @@
         type: "image/svg+xml;charset=utf-8"
       });
 
-      downloadBlob(blob, "timeline.svg");
+      downloadBlob(blob, getExportFilename("timeline", "svg"));
       setStatus("Downloaded SVG.");
     }
 
@@ -3155,7 +3155,7 @@
 
         const anchor = document.createElement("a");
         anchor.href = dataUrl;
-        anchor.download = "timeline.png";
+        anchor.download = getExportFilename("timeline", "png");
         anchor.click();
 
         setStatus("Downloaded PNG.");
@@ -3482,7 +3482,7 @@
         type: "image/svg+xml;charset=utf-8"
       });
 
-      downloadBlob(blob, "mitre_attack_mapping.svg");
+      downloadBlob(blob, getExportFilename("mitre-attack-mapping", "svg"));
       setStatus("Downloaded MITRE SVG.");
     }
 
@@ -3544,7 +3544,7 @@
 
         const anchor = document.createElement("a");
         anchor.href = dataUrl;
-        anchor.download = "mitre_attack_mapping.png";
+        anchor.download = getExportFilename("mitre-attack-mapping", "png");
         anchor.click();
 
         setStatus("Downloaded MITRE PNG.");
@@ -3552,6 +3552,30 @@
         console.error(error);
         setStatus(`Could not export MITRE PNG: ${error.message || error}`, true);
       }
+    }
+
+    function getLoadedFileBaseName() {
+      const fileName = cleanText(state.fileName);
+      const withoutPath = fileName.split(/[\\/]/).pop() || "timeline";
+      const withoutExtension = withoutPath.replace(/\.[^.]+$/, "");
+      return withoutExtension || "timeline";
+    }
+
+    function makeSafeFilenamePart(value) {
+      return cleanText(value)
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-z0-9._-]+/gi, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[-_.]+|[-_.]+$/g, "")
+        .slice(0, 120) || "timeline";
+    }
+
+    function getExportFilename(exportType, extension) {
+      const baseName = makeSafeFilenamePart(getLoadedFileBaseName());
+      const safeType = makeSafeFilenamePart(exportType);
+      const safeExtension = makeSafeFilenamePart(extension).replace(/^\.+/, "") || "png";
+
+      return `${baseName}_${safeType}.${safeExtension}`;
     }
 
     function downloadBlob(blob, filename) {
