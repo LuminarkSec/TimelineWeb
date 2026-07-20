@@ -1269,7 +1269,6 @@
             <button class="button primary" id="renderButton" disabled>Render timeline</button>
             <button class="button" id="svgButton" disabled>SVG</button>
             <button class="button" id="pngButton" disabled>PNG</button>
-            <button class="button" id="printButton" disabled>Print / PDF</button>
           </div>
             </div>
           </details>
@@ -1421,7 +1420,6 @@
           <div class="timeline-toolbar-actions" aria-label="Timeline exports">
             <button class="button" id="toolbarSvgButton" disabled>SVG</button>
             <button class="button" id="toolbarPngButton" disabled>PNG</button>
-            <button class="button" id="toolbarPrintButton" disabled>Print / PDF</button>
           </div>
         </div>
 
@@ -1767,10 +1765,8 @@
       renderButton: document.getElementById("renderButton"),
       svgButton: document.getElementById("svgButton"),
       pngButton: document.getElementById("pngButton"),
-      printButton: document.getElementById("printButton"),
       toolbarSvgButton: document.getElementById("toolbarSvgButton"),
       toolbarPngButton: document.getElementById("toolbarPngButton"),
-      toolbarPrintButton: document.getElementById("toolbarPrintButton"),
       mitreSvgButton: document.getElementById("mitreSvgButton"),
       mitrePngButton: document.getElementById("mitrePngButton"),
       toolbarMitreSvgButton: document.getElementById("toolbarMitreSvgButton"),
@@ -1976,10 +1972,8 @@
       [
         els.svgButton,
         els.pngButton,
-        els.printButton,
         els.toolbarSvgButton,
-        els.toolbarPngButton,
-        els.toolbarPrintButton
+        els.toolbarPngButton
       ].forEach((button) => {
         if (button) {
           button.disabled = !hasEvents;
@@ -3672,10 +3666,8 @@
     els.renderButton.addEventListener("click", renderTimeline);
     els.svgButton.addEventListener("click", downloadSvg);
     els.pngButton.addEventListener("click", downloadPng);
-    els.printButton.addEventListener("click", () => window.print());
     if (els.toolbarSvgButton) els.toolbarSvgButton.addEventListener("click", downloadSvg);
     if (els.toolbarPngButton) els.toolbarPngButton.addEventListener("click", downloadPng);
-    if (els.toolbarPrintButton) els.toolbarPrintButton.addEventListener("click", () => window.print());
     if (els.mitreSvgButton) els.mitreSvgButton.addEventListener("click", downloadMitreSvg);
     if (els.mitrePngButton) els.mitrePngButton.addEventListener("click", downloadMitrePng);
     if (els.toolbarMitreSvgButton) els.toolbarMitreSvgButton.addEventListener("click", downloadMitreSvg);
