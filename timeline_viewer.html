@@ -2988,9 +2988,16 @@
       const spacing = getRowSpacing();
       const activityLineHeight = spacing < 0 ? 16 : 18;
       const extraSvgPadding = Math.max(0, spacing);
+      const groupByDate = els.groupByDate && els.groupByDate.checked;
+      const dateHeadingHeight = 26;
+      const dateHeadingGap = 22;
+      const groupGap = 30;
 
       const colours = {
         background: getCssColour("--panel", "#ffffff"),
+        panel2: getCssColour("--panel-2", "#f9fafb"),
+        border: getCssColour("--border", "#d7dce5"),
+        muted: getCssColour("--muted", "#6b7280"),
         line: getCssColour("--line", "#111827"),
         marker: getCssColour("--marker", "#2563eb"),
         timestamp: getCssColour("--timestamp", "#b00020"),
@@ -3032,15 +3039,58 @@
         };
       });
 
+      const layoutGroups = [];
       let y = marginTop;
-      for (const event of layoutEvents) {
-        event.y = y;
-        y += event.height;
+
+      if (groupByDate) {
+        const grouped = new Map();
+
+        for (const event of layoutEvents) {
+          if (!grouped.has(event.dateGroup)) {
+            grouped.set(event.dateGroup, []);
+          }
+
+          grouped.get(event.dateGroup).push(event);
+        }
+
+        for (const [date, groupEvents] of grouped.entries()) {
+          const headingY = y;
+          y += dateHeadingHeight + dateHeadingGap;
+
+          for (const event of groupEvents) {
+            event.y = y;
+            y += event.height;
+          }
+
+          layoutGroups.push({
+            date,
+            events: groupEvents,
+            headingY,
+            lineStart: groupEvents[0].y,
+            lineEnd: groupEvents[groupEvents.length - 1].y
+          });
+
+          y += groupGap;
+        }
+
+        if (layoutGroups.length) {
+          y -= groupGap;
+        }
+      } else {
+        for (const event of layoutEvents) {
+          event.y = y;
+          y += event.height;
+        }
+
+        layoutGroups.push({
+          date: "",
+          events: layoutEvents,
+          headingY: null,
+          lineStart: layoutEvents[0].y,
+          lineEnd: layoutEvents[layoutEvents.length - 1].y
+        });
       }
 
-      const lastEvent = layoutEvents[layoutEvents.length - 1];
-      const lineStart = layoutEvents[0].y;
-      const lineEnd = lastEvent.y;
       const height = Math.max(220, y + marginBottom);
 
       const parts = [];
@@ -3059,47 +3109,75 @@
         `);
       }
 
-      parts.push(`<line x1="${lineX}" y1="${lineStart}" x2="${lineX}" y2="${lineEnd}" stroke="${escapeXml(colours.line)}" stroke-width="2"/>`);
+      if (groupByDate) {
+        for (const group of layoutGroups) {
+          const headingText = cleanText(group.date).toUpperCase();
+          const headingWidth = Math.max(110, Math.min(280, headingText.length * 8 + 28));
 
-      for (const event of layoutEvents) {
-        const eventY = event.y;
-
-        parts.push(`<circle cx="${lineX}" cy="${eventY}" r="${markerR}" fill="${escapeXml(colours.marker)}"/>`);
-
-        parts.push(`
-          <text x="${timestampX}" y="${eventY + 4}"
-            text-anchor="end"
-            font-family="${escapeXml(fonts.timestamp)}"
-            font-size="${escapeXml(typeStyles.timestampSize)}"
-            font-weight="${escapeXml(typeStyles.timestampWeight)}"
-            fill="${escapeXml(colours.timestamp)}">${escapeXml(event.timestampDisplay)}</text>
-        `);
-
-        parts.push(`
-          <rect x="${contentX}" y="${eventY - 12}"
-            width="${tacticWidth}"
-            height="${tacticHeight}"
-            rx="3"
-            fill="${escapeXml(colours.bar)}"/>
-        `);
-
-        parts.push(`
-          <text x="${contentX + 10}" y="${eventY + 5}"
-            font-family="${escapeXml(fonts.tactic)}"
-            font-size="${escapeXml(typeStyles.tacticSize)}"
-            font-weight="${escapeXml(typeStyles.tacticWeight)}"
-            fill="${escapeXml(colours.barText)}">${escapeXml(typeStyles.tacticTransform === "uppercase" ? event.tactic.toUpperCase() : event.tactic)}</text>
-        `);
-
-        event.lines.forEach((line, lineIndex) => {
           parts.push(`
-            <text x="${contentX}" y="${eventY + 34 + lineIndex * activityLineHeight}"
-              font-family="${escapeXml(fonts.activity)}"
-              font-size="${escapeXml(typeStyles.activitySize)}"
-              font-weight="${escapeXml(typeStyles.activityWeight)}"
-              fill="${escapeXml(colours.activity)}">${escapeXml(line)}</text>
+            <rect x="${contentX}" y="${group.headingY}"
+              width="${headingWidth}"
+              height="${dateHeadingHeight}"
+              rx="13"
+              fill="${escapeXml(colours.panel2)}"
+              stroke="${escapeXml(colours.border)}"/>
           `);
-        });
+
+          parts.push(`
+            <text x="${contentX + 14}" y="${group.headingY + 17}"
+              font-family="${escapeXml(fonts.title)}"
+              font-size="12px"
+              font-weight="900"
+              fill="${escapeXml(colours.muted)}">${escapeXml(headingText)}</text>
+          `);
+        }
+      }
+
+      for (const group of layoutGroups) {
+        parts.push(`<line x1="${lineX}" y1="${group.lineStart}" x2="${lineX}" y2="${group.lineEnd}" stroke="${escapeXml(colours.line)}" stroke-width="2"/>`);
+      }
+
+      for (const group of layoutGroups) {
+        for (const event of group.events) {
+          const eventY = event.y;
+
+          parts.push(`<circle cx="${lineX}" cy="${eventY}" r="${markerR}" fill="${escapeXml(colours.marker)}"/>`);
+
+          parts.push(`
+            <text x="${timestampX}" y="${eventY + 4}"
+              text-anchor="end"
+              font-family="${escapeXml(fonts.timestamp)}"
+              font-size="${escapeXml(typeStyles.timestampSize)}"
+              font-weight="${escapeXml(typeStyles.timestampWeight)}"
+              fill="${escapeXml(colours.timestamp)}">${escapeXml(event.timestampDisplay)}</text>
+          `);
+
+          parts.push(`
+            <rect x="${contentX}" y="${eventY - 12}"
+              width="${tacticWidth}"
+              height="${tacticHeight}"
+              rx="3"
+              fill="${escapeXml(colours.bar)}"/>
+          `);
+
+          parts.push(`
+            <text x="${contentX + 10}" y="${eventY + 5}"
+              font-family="${escapeXml(fonts.tactic)}"
+              font-size="${escapeXml(typeStyles.tacticSize)}"
+              font-weight="${escapeXml(typeStyles.tacticWeight)}"
+              fill="${escapeXml(colours.barText)}">${escapeXml(typeStyles.tacticTransform === "uppercase" ? event.tactic.toUpperCase() : event.tactic)}</text>
+          `);
+
+          event.lines.forEach((line, lineIndex) => {
+            parts.push(`
+              <text x="${contentX}" y="${eventY + 34 + lineIndex * activityLineHeight}"
+                font-family="${escapeXml(fonts.activity)}"
+                font-size="${escapeXml(typeStyles.activitySize)}"
+                font-weight="${escapeXml(typeStyles.activityWeight)}"
+                fill="${escapeXml(colours.activity)}">${escapeXml(line)}</text>
+            `);
+          });
+        }
       }
 
       parts.push(`</svg>`);
