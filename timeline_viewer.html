@@ -2974,15 +2974,15 @@
       const events = getExportEvents();
       if (!events.length) return;
 
-      const width = 1200;
+      const width = 1080;
       const showTimelineTitle = shouldExportTimelineTitle();
       const marginTop = showTimelineTitle ? 70 : 24;
       const marginBottom = 70;
       const titleY = 34;
-      const lineX = 390;
-      const timestampX = 350;
+      const lineX = 315;
+      const timestampX = 275;
       const markerR = 6;
-      const contentX = 420;
+      const contentX = 350;
       const tacticWidth = 325;
       const tacticHeight = 24;
       const spacing = getRowSpacing();
@@ -3020,7 +3020,7 @@
       };
 
       const layoutEvents = events.map((event) => {
-        const lines = wrapSvgText(event.activity, 92);
+        const lines = wrapSvgText(event.activity, 78);
         const previewHeight = estimateEventHeight(event);
         const svgContentHeight = 44 + lines.length * activityLineHeight + extraSvgPadding;
         const height = Math.max(previewHeight, svgContentHeight);
